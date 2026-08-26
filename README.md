@@ -64,3 +64,20 @@ Set `MONGO_URI` in `server/.env` for Atlas or another MongoDB server.
 
 ## Production
 Build the frontend with `npm run build` and serve the generated `client/dist` from a web server/CDN. Put the API behind HTTPS and use a strong JWT secret.
+
+
+mongodb+srv://balamuruganmurugesan1194_db_user:<db_password>@cluster0.kru4fer.mongodb.net/?appName=Cluster0
+
+Murugan@1194
+
+https://ro-water-plant-mern.onrender.com/ - backend
+
+vercel 
+1016821d-21b4c1aa
+f893767c-459f998b
+fdc67e67-4c8b9c0b
+e9aeb031-94f08800
+df2f4f84-f5d86614
+de8d03d8-04ece3e8
+
+npx plugins add vercel/vercel-plugin

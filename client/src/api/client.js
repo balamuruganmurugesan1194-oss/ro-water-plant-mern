@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export const API = "http://localhost:5000/api";
+export const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const api = axios.create({
   baseURL: API,
@@ -17,8 +17,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// If the token is invalid/expired, force a clean logout instead of
-// letting every page handle 401s individually.
+// If the token is invalid/expired, force a clean logout.
 api.interceptors.response.use(
   (response) => response,
   (error) => {

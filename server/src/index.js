@@ -12,8 +12,18 @@ import productRoutes from "./routes/productRoutes.js";
 
 const app = express();
 
-app.use(cors());
+// app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://my-mern-app.vercel.app"
+    ],
+    credentials: true
+  })
+);
 app.use(express.json());
+
 
 // Root route
 app.get("/", (_, res) => {
