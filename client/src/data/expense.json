@@ -1,0 +1,19 @@
+[
+    { "value": "raw_water_municipal", "label": "Raw Water / Municipal Water Charges" },
+    { "value": "electricity_bill", "label": "Electricity Bill" },
+    { "value": "ro_membrane_replacement", "label": "RO Membrane Replacement" },
+    { "value": "ro_filter_replacement", "label": "RO Filter (Sediment / Carbon) Replacement" },
+    { "value": "antiscalant_chemical", "label": "Antiscalant Chemical" },
+    { "value": "cleaning_chemical", "label": "Cleaning Chemical / Agents" },
+    { "value": "jar_20l", "label": "20L Jar (Purchase / Replacement)" },
+    { "value": "bottle_1l", "label": "1L Bottle" },
+    { "value": "bottle_500ml", "label": "500ml Bottle" },
+    { "value": "bottle_cap", "label": "Bottle Cap" },
+    { "value": "jar_cap_lid", "label": "Jar Cap / Lid" },
+    { "value": "label_sticker", "label": "Label / Sticker" },
+    { "value": "staff_salary", "label": "Staff Salary / Wages" },
+    { "value": "rent", "label": "Rent" },
+    { "value": "vehicle_fuel", "label": "Vehicle / Fuel" },
+    { "value": "maintenance_repairs", "label": "Maintenance / Repairs" },
+    { "value": "other", "label": "Other" }
+  ]

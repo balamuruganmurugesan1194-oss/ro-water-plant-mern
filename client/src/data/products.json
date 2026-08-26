@@ -1,0 +1,12 @@
+{
+  "products": [
+    { "value": "20L Jar", "label": "20L Jar (Bubble Top)" },
+    { "value": "1L Bottle", "label": "1L Bottle" },
+    { "value": "500ml Bottle", "label": "500ml Bottle" },
+    { "value": "250ml Bottle", "label": "250ml Bottle" },
+    { "value": "Bulk Tanker Water", "label": "Bulk / Tanker Water" },
+    { "value": "Empty Jar", "label": "Empty Jar" },
+    { "value": "Jar Cap Lid", "label": "Jar Cap / Lid" },
+    { "value": "Dispenser", "label": "Dispenser / Jar Stand" }
+  ]
+}
