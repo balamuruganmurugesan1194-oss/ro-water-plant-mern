@@ -19,31 +19,41 @@ function App() {
   return (
     <AuthProvider>
       <Routes>
-        {/* Public */}
+        {/* Public Pages */}
         <Route path="/login" element={<Login />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route path="/not-found" element={<NotFound />} />
 
-        {/* Authenticated (any role) */}
-        <Route element={<ProtectedRoute />}>
+        {/* Admin + Staff Pages */}
+        <Route
+          element={
+            <ProtectedRoute allowedRoles={["admin", "staff"]} />
+          }
+        >
           <Route element={<MainLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/products" element={<Products />} />
             <Route path="/sales" element={<Sales />} />
-            <Route path="/expenses" element={<Expenses />} />
             <Route path="/parties" element={<Parties />} />
-
-            {/*
-              Example of a role-restricted route (uncomment + point at a
-              real component when you add an admin-only page):
-
-              <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-                <Route path="/settings" element={<AdminSettings />} />
-              </Route>
-            */}
           </Route>
         </Route>
 
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        {/* Admin Only Pages */}
+        <Route
+          element={<ProtectedRoute allowedRoles={["admin"]} />}
+        >
+          <Route element={<MainLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/expenses" element={<Expenses />} />
+          </Route>
+        </Route>
+
+        {/* Root */}
+        <Route
+          path="/"
+          element={<Navigate to="/dashboard" replace />}
+        />
+
+        {/* Invalid URL */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AuthProvider>
