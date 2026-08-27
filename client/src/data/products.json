@@ -8,5 +8,18 @@
     { "value": "Empty Jar", "label": "Empty Jar" },
     { "value": "Jar Cap Lid", "label": "Jar Cap / Lid" },
     { "value": "Dispenser", "label": "Dispenser / Jar Stand" }
+  ],
+  "categories": [
+    { "value": "Water", "label": "Water" },
+    { "value": "Bottle", "label": "Bottle" },
+    { "value": "Jar", "label": "Jar" },
+    { "value": "Other", "label": "Other" }
+  ],
+  "units": [
+    { "value": "Litre", "label": "Litre" },
+    { "value": "Bottle", "label": "Bottle" },
+    { "value": "Box", "label": "Box" },
+    { "value": "Jar", "label": "Jar" },
+    { "value": "Piece", "label": "Piece" }
   ]
 }

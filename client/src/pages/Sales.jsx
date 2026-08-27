@@ -1,68 +1,108 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+
 import { Plus, Trash2 } from "lucide-react";
 
 import api from "../api/client";
 import { money, today } from "../utils/helpers";
+
 import Table from "../components/Table";
 import Loading from "../components/Loading";
-import { paymentMethods, paymentStatus } from "../data/payment.json";
+import Pagination from "../components/Pagination";
 import DeleteButton from "../components/DeleteButton";
+import SearchableSelect from "../components/SearchableSelect";
+import SaleDetailsModal from "../components/SaleDetailsModal";
+
+import { paymentMethods, paymentStatus } from "../data/payment.json";
+
 import { useAuth } from "../context/AuthContext";
+
 function Sales() {
   // ==========================================
-  // STATE
+  // AUTH
   // ==========================================
+
   const { role } = useAuth();
+
   const canEdit = role === "admin";
+
+  // ==========================================
+  // SALES
+  // ==========================================
+
   const [sales, setSales] = useState([]);
+
   const [products, setProducts] = useState([]);
+
+  // ==========================================
+  // FILTERS
+  // ==========================================
+
   const [type, setType] = useState("retail");
+
   const [month, setMonth] = useState("2026-08");
+
   const [search, setSearch] = useState("");
+
+  // ==========================================
+  // LOADING
+  // ==========================================
+
   const [loading, setLoading] = useState(false);
+
   const [productsLoading, setProductsLoading] = useState(false);
+
+  const [saving, setSaving] = useState(false);
+
+  // ==========================================
+  // FORM
+  // ==========================================
+
   const [errors, setErrors] = useState({});
+
+  const [selectedSale, setSelectedSale] = useState(null);
+
+  // ==========================================
+  // PAGINATION
+  // ==========================================
+
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // ==========================================
+  // SEARCH THROTTLE
+  // ==========================================
+
+  const throttleTimeoutRef = useRef(null);
+
+  const lastSearchTimeRef = useRef(0);
+
   // ==========================================
   // BLANK FORM
   // ==========================================
 
   const createBlankForm = () => ({
     date: today(),
-
     customerName: "",
-
-    contactNumber: "",
-
-    area: "",
-
-    product: "",
-
-    quantity: 0,
-
-    rate: 0,
-
-    jarsDelivered: 0,
-
-    jarsReturned: 0,
-
+    items: [],
     paymentMode: "Cash",
-
     paymentStatus: "Paid",
-
     notes: "",
-
     amount: 0,
   });
 
   const [form, setForm] = useState(createBlankForm());
 
   // ==========================================
-  // SELECTED PRODUCT
+  // BLANK ITEM
   // ==========================================
 
-  const selectedProduct = products.find(
-    (product) => product.name === form.product,
-  );
+  const createBlankItem = () => ({
+    product: "",
+    quantity: 1,
+    rate: 0,
+    amount: 0,
+  });
 
   // ==========================================
   // LOAD PRODUCTS
@@ -74,26 +114,7 @@ function Sales() {
 
       const response = await api.get("/products?active=true");
 
-      const activeProducts = response.data || [];
-
-      setProducts(activeProducts);
-
-      // Set first product automatically
-      if (activeProducts.length > 0 && !form.product) {
-        const firstProduct = activeProducts[0];
-
-        setForm((prev) => ({
-          ...prev,
-
-          product: firstProduct.name,
-
-          rate: firstProduct.rate,
-
-          jarsDelivered: firstProduct.jarTracking ? prev.quantity : 0,
-
-          jarsReturned: 0,
-        }));
-      }
+      setProducts(response.data || []);
     } catch (error) {
       console.error("Failed to load products:", error);
     } finally {
@@ -105,19 +126,21 @@ function Sales() {
   // LOAD SALES
   // ==========================================
 
-  const load = async () => {
+  const loadSales = async (searchValue = search) => {
     try {
       setLoading(true);
 
       const response = await api.get(
         `/sales?month=${month}&type=${type}&search=${encodeURIComponent(
-          search,
+          searchValue,
         )}`,
       );
 
       setSales(response.data || []);
     } catch (error) {
       console.error("Failed to load sales:", error);
+
+      setSales([]);
     } finally {
       setLoading(false);
     }
@@ -132,15 +155,72 @@ function Sales() {
   }, []);
 
   // ==========================================
-  // LOAD SALES WHEN FILTER CHANGES
+  // LOAD SALES
+  // MONTH / TYPE
   // ==========================================
 
   useEffect(() => {
-    load();
-  }, [month, type, search]);
+    setCurrentPage(1);
+
+    loadSales(search);
+  }, [month, type]);
 
   // ==========================================
-  // HANDLE FORM CHANGE
+  // SEARCH THROTTLING
+  // ==========================================
+
+  useEffect(() => {
+    const now = Date.now();
+
+    const elapsed = now - lastSearchTimeRef.current;
+
+    const delay = elapsed >= 500 ? 0 : 500 - elapsed;
+
+    if (throttleTimeoutRef.current) {
+      clearTimeout(throttleTimeoutRef.current);
+    }
+
+    throttleTimeoutRef.current = setTimeout(() => {
+      lastSearchTimeRef.current = Date.now();
+
+      setCurrentPage(1);
+
+      loadSales(search);
+    }, delay);
+
+    return () => {
+      if (throttleTimeoutRef.current) {
+        clearTimeout(throttleTimeoutRef.current);
+      }
+    };
+  }, [search]);
+
+  // ==========================================
+  // CLEANUP
+  // ==========================================
+
+  useEffect(() => {
+    return () => {
+      if (throttleTimeoutRef.current) {
+        clearTimeout(throttleTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // ==========================================
+  // PAGINATION CALCULATION
+  // ==========================================
+
+  const totalPages = Math.ceil(sales.length / itemsPerPage);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+
+  const endIndex = startIndex + itemsPerPage;
+
+  const paginatedSales = sales.slice(startIndex, endIndex);
+
+  // ==========================================
+  // FORM CHANGE
   // ==========================================
 
   const handleChange = (field, value) => {
@@ -149,7 +229,6 @@ function Sales() {
       [field]: value,
     }));
 
-    // Remove field validation error
     if (errors[field]) {
       setErrors((prev) => ({
         ...prev,
@@ -159,32 +238,115 @@ function Sales() {
   };
 
   // ==========================================
+  // AVAILABLE PRODUCTS
+  // ==========================================
+
+  const getAvailableProducts = (currentIndex) => {
+    const selectedProducts = form.items
+      .map((item, index) => (index !== currentIndex ? item.product : ""))
+      .filter(Boolean);
+
+    return products.filter(
+      (product) => !selectedProducts.includes(product._id),
+    );
+  };
+
+  // ==========================================
+  // ADD PRODUCT
+  // ==========================================
+
+  const addProductItem = () => {
+    setForm((prev) => ({
+      ...prev,
+      items: [...prev.items, createBlankItem()],
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      items: "",
+    }));
+  };
+
+  // ==========================================
+  // REMOVE PRODUCT
+  // ==========================================
+
+  const removeProductItem = (index) => {
+    setForm((prev) => {
+      const items = prev.items.filter((_, i) => i !== index);
+
+      const totalAmount = items.reduce(
+        (total, item) => total + Number(item.amount || 0),
+        0,
+      );
+
+      return {
+        ...prev,
+        items,
+        amount: totalAmount,
+      };
+    });
+
+    setErrors((prev) => {
+      const newErrors = {
+        ...prev,
+      };
+
+      delete newErrors[`product_${index}`];
+
+      delete newErrors[`quantity_${index}`];
+
+      delete newErrors[`rate_${index}`];
+
+      return newErrors;
+    });
+  };
+
+  // ==========================================
   // PRODUCT CHANGE
   // ==========================================
 
-  const handleProductChange = (productName) => {
-    const product = products.find((item) => item.name === productName);
+  const handleProductChange = (index, productId) => {
+    const product = products.find((item) => item._id === productId);
 
     if (!product) {
       return;
     }
 
-    setForm((prev) => ({
-      ...prev,
+    setForm((prev) => {
+      const items = [...prev.items];
 
-      product: product.name,
+      const quantity = Number(items[index]?.quantity || 1);
 
-      rate: product.rate,
+      const rate = Number(product.rate || 0);
 
-      amount: form.quantity * product.rate,
-    }));
+      items[index] = {
+        ...items[index],
+
+        product: product._id,
+
+        quantity,
+
+        rate,
+
+        amount: quantity * rate,
+      };
+
+      const totalAmount = items.reduce(
+        (total, item) => total + Number(item.amount || 0),
+        0,
+      );
+
+      return {
+        ...prev,
+        items,
+        amount: totalAmount,
+      };
+    });
 
     setErrors((prev) => ({
       ...prev,
-      product: "",
-      rate: "",
-      jarsDelivered: "",
-      jarsReturned: "",
+      [`product_${index}`]: "",
     }));
   };
 
@@ -192,21 +354,42 @@ function Sales() {
   // QUANTITY CHANGE
   // ==========================================
 
-  const handleQuantityChange = (value) => {
-    setForm((prev) => ({
-      ...prev,
+  const handleItemQuantityChange = (index, value) => {
+    const quantity = value === "" ? "" : Number(value);
 
-      quantity: value,
+    setForm((prev) => {
+      const items = [...prev.items];
 
-      amount: value * form.rate,
-    }));
+      const item = items[index];
 
-    if (errors.quantity) {
-      setErrors((prev) => ({
+      if (!item) {
+        return prev;
+      }
+
+      const amount = quantity === "" ? 0 : quantity * Number(item.rate || 0);
+
+      items[index] = {
+        ...item,
+        quantity,
+        amount,
+      };
+
+      const totalAmount = items.reduce(
+        (total, item) => total + Number(item.amount || 0),
+        0,
+      );
+
+      return {
         ...prev,
-        quantity: "",
-      }));
-    }
+        items,
+        amount: totalAmount,
+      };
+    });
+
+    setErrors((prev) => ({
+      ...prev,
+      [`quantity_${index}`]: "",
+    }));
   };
 
   // ==========================================
@@ -216,50 +399,54 @@ function Sales() {
   const validateForm = () => {
     const newErrors = {};
 
-    // Date
+    // DATE
+
     if (!form.date) {
       newErrors.date = "Date is required";
     }
 
-    // Customer name
+    // CUSTOMER
+
     if (!form.customerName.trim()) {
       newErrors.customerName = "Customer name is required";
     } else if (form.customerName.trim().length < 2) {
       newErrors.customerName = "Enter a valid customer name";
     }
 
-    // Contact
-    if (!form.contactNumber.trim()) {
-      newErrors.contactNumber = "Contact number is required";
-    } else if (!/^[6-9]\d{9}$/.test(form.contactNumber.trim())) {
-      newErrors.contactNumber = "Enter a valid 10-digit mobile number";
+    // ITEMS
+
+    if (!form.items.length) {
+      newErrors.items = "Add at least one product";
     }
 
-    // Product
-    if (!form.product) {
-      newErrors.product = "Product is required";
-    }
+    form.items.forEach((item, index) => {
+      if (!item.product) {
+        newErrors[`product_${index}`] = "Product is required";
+      }
 
-    // Quantity
-    if (form.quantity === "" || Number(form.quantity) <= 0) {
-      newErrors.quantity = "Quantity must be greater than 0";
-    }
+      if (item.quantity === "" || Number(item.quantity) <= 0) {
+        newErrors[`quantity_${index}`] = "Quantity must be greater than 0";
+      }
 
-    // Rate
-    if (form.rate === "" || Number(form.rate) <= 0) {
-      newErrors.rate = "Rate must be greater than 0";
-    }
+      if (item.rate === "" || Number(item.rate) <= 0) {
+        newErrors[`rate_${index}`] = "Rate must be greater than 0";
+      }
+    });
+
+    // AMOUNT
 
     if (form.amount === "" || Number(form.amount) <= 0) {
       newErrors.amount = "Amount must be greater than 0";
     }
 
-    // Payment method
+    // PAYMENT MODE
+
     if (!form.paymentMode) {
       newErrors.paymentMode = "Payment method is required";
     }
 
-    // Payment status
+    // PAYMENT STATUS
+
     if (!form.paymentStatus) {
       newErrors.paymentStatus = "Payment status is required";
     }
@@ -281,43 +468,54 @@ function Sales() {
     }
 
     try {
+      setSaving(true);
+
       const payload = {
-        ...form,
+        date: form.date,
+
+        customerName: form.customerName.trim(),
 
         type,
 
-        quantity: Number(form.quantity),
+        items: form.items.map((item) => ({
+          product: item.product,
 
-        rate: Number(form.rate),
+          quantity: Number(item.quantity),
 
-        amount: Number(form.quantity) * Number(form.rate),
+          rate: Number(item.rate),
+
+          amount: Number(item.quantity) * Number(item.rate),
+        })),
+
+        amount: form.items.reduce(
+          (total, item) => total + Number(item.quantity) * Number(item.rate),
+          0,
+        ),
+
+        paymentMode: form.paymentMode,
+
+        paymentStatus: form.paymentStatus,
+
+        notes: form.notes,
       };
+
+      console.log("SALE PAYLOAD:", payload);
 
       await api.post("/sales", payload);
 
-      // Clear form
-      const newForm = createBlankForm();
+      setForm(createBlankForm());
 
-      // Keep first product selected
-      if (products.length > 0) {
-        const firstProduct = products[0];
-
-        newForm.product = firstProduct.name;
-
-        newForm.rate = firstProduct.rate;
-      }
-
-      setForm(newForm);
-
-      // Clear errors
       setErrors({});
 
-      // Reload sales
-      await load();
+      setCurrentPage(1);
+
+      await loadSales(search);
     } catch (error) {
       console.error("Failed to save sale:", error);
 
       alert(error?.response?.data?.message || "Failed to save sale");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -329,7 +527,13 @@ function Sales() {
     try {
       await api.delete(`/sales/${id}`);
 
-      await load();
+      await loadSales(search);
+
+      const newTotalPages = Math.ceil((sales.length - 1) / itemsPerPage);
+
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages);
+      }
     } catch (error) {
       console.error("Failed to delete sale:", error);
 
@@ -338,7 +542,7 @@ function Sales() {
   };
 
   // ==========================================
-  // CHANGE SALE TYPE
+  // TYPE CHANGE
   // ==========================================
 
   const handleTypeChange = (newType) => {
@@ -346,17 +550,19 @@ function Sales() {
 
     setErrors({});
 
-    const newForm = createBlankForm();
+    setCurrentPage(1);
 
-    const firstProduct = products[0];
+    setForm(createBlankForm());
+  };
 
-    newForm.product = firstProduct.name;
+  // ==========================================
+  // ITEMS PER PAGE
+  // ==========================================
 
-    newForm.rate = firstProduct.rate;
+  const handleItemsPerPageChange = (value) => {
+    setItemsPerPage(value);
 
-    newForm.amount = firstProduct.quantity * firstProduct.rate;
-
-    setForm(newForm);
+    setCurrentPage(1);
   };
 
   // ==========================================
@@ -365,9 +571,9 @@ function Sales() {
 
   return (
     <div className="content">
-      {/* ========================================
+      {/* ======================================
           NEW SALE
-      ======================================== */}
+      ====================================== */}
 
       <section className="panel">
         <div className="panel-head">
@@ -387,7 +593,7 @@ function Sales() {
           </div>
         </div>
 
-        <form className="form-grid" onSubmit={submit}>
+        <form className="form-grid" onSubmit={submit} noValidate>
           {/* DATE */}
 
           <label>
@@ -417,191 +623,221 @@ function Sales() {
             )}
           </label>
 
-          {/* CONTACT */}
+          {/* PAYMENT MODE */}
 
-          <label>
-            Contact
-            <input
-              type="tel"
-              value={form.contactNumber}
-              maxLength={10}
-              inputMode="numeric"
-              placeholder="10-digit mobile"
-              className={errors.contactNumber ? "input-error" : ""}
-              onChange={(e) =>
-                handleChange("contactNumber", e.target.value.replace(/\D/g, ""))
-              }
-            />
-            {errors.contactNumber && (
-              <small className="error-text">{errors.contactNumber}</small>
-            )}
-          </label>
+          <div className="form-field">
+            <label>Payment Mode</label>
 
-          {/* AREA */}
-
-          <label>
-            Area / Route
-            <input
-              type="text"
-              value={form.area}
-              placeholder="Area / Route"
-              onChange={(e) => handleChange("area", e.target.value)}
-            />
-          </label>
-
-          {/* ======================================
-              PRODUCT
-          ====================================== */}
-
-          {/* PRODUCT */}
-
-          <label>
-            Product
-            {productsLoading ? (
-              <select disabled>
-                <option>Loading products...</option>
-              </select>
-            ) : (
-              <select
-                value={form.product}
-                className={errors.product ? "input-error" : ""}
-                onChange={(e) => handleProductChange(e.target.value)}
-              >
-                <option value="">Select Product</option>
-
-                {products.map((product) => (
-                  <option key={product._id} value={product.name}>
-                    {product.name} - ₹{product.rate}
-                  </option>
-                ))}
-              </select>
-            )}
-            {errors.product && (
-              <small className="error-text">{errors.product}</small>
-            )}
-          </label>
-
-          {/* QUANTITY */}
-
-          <label>
-            Qty
-            <input
-              type="number"
-              min="1"
-              value={form.quantity}
-              className={errors.quantity ? "input-error" : ""}
-              onChange={(e) => handleQuantityChange(e.target.value)}
-            />
-            {errors.quantity && (
-              <small className="error-text">{errors.quantity}</small>
-            )}
-          </label>
-
-          {/* RATE */}
-
-          <label>
-            Rate
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.rate}
-              className={errors.rate ? "input-error" : ""}
-              onChange={(e) => handleChange("rate", e.target.value)}
-              readOnly
-            />
-            {errors.rate && <small className="error-text">{errors.rate}</small>}
-          </label>
-
-          <label>
-            Amount
-            <input
-              type="number"
-              min="1"
-              step="0.01"
-              value={form.amount}
-              placeholder="Enter amount"
-              className={errors.amount ? "input-error" : ""}
-              onChange={(e) => handleChange("amount", e.target.value)}
-              readOnly
-            />
-            {errors.amount && (
-              <small className="error-text">{errors.amount}</small>
-            )}
-          </label>
-          {/* ======================================
-              PAYMENT MODE
-          ====================================== */}
-
-          <label>
-            Payment Mode
-            <select
+            <SearchableSelect
               value={form.paymentMode}
-              className={errors.paymentMode ? "input-error" : ""}
-              onChange={(e) => handleChange("paymentMode", e.target.value)}
-            >
-              {paymentMethods.map((method) => (
-                <option key={method.value} value={method.value}>
-                  {method.label}
-                </option>
-              ))}
-            </select>
+              options={paymentMethods.map((method) => ({
+                value: method.value,
+                label: method.label,
+              }))}
+              placeholder="Select Payment Mode"
+              error={!!errors.paymentMode}
+              onChange={(value) => handleChange("paymentMode", value)}
+            />
+
             {errors.paymentMode && (
               <small className="error-text">{errors.paymentMode}</small>
             )}
-          </label>
+          </div>
 
-          {/* ======================================
-              PAYMENT STATUS
-          ====================================== */}
+          {/* PAYMENT STATUS */}
 
-          <label>
-            Status
-            <select
+          <div className="form-field">
+            <label>Status</label>
+
+            <SearchableSelect
               value={form.paymentStatus}
-              className={errors.paymentStatus ? "input-error" : ""}
-              onChange={(e) => handleChange("paymentStatus", e.target.value)}
-            >
-              {paymentStatus.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
+              options={paymentStatus.map((status) => ({
+                value: status.value,
+                label: status.label,
+              }))}
+              placeholder="Select Status"
+              error={!!errors.paymentStatus}
+              onChange={(value) => handleChange("paymentStatus", value)}
+            />
+
             {errors.paymentStatus && (
               <small className="error-text">{errors.paymentStatus}</small>
             )}
-          </label>
+          </div>
 
           {/* ======================================
-              SAVE
+              PRODUCTS
           ====================================== */}
 
-          <button className="primary" type="submit" disabled={productsLoading}>
-            <Plus size={18} />
-            Save Sale
-          </button>
+          <div className="sale-items-wrapper">
+            <div className="sale-items-header">
+              <h4>Products</h4>
+
+              <button
+                type="button"
+                className="secondary"
+                onClick={addProductItem}
+                disabled={
+                  productsLoading || form.items.length >= products.length
+                }
+              >
+                <Plus size={16} />
+                Add Product
+              </button>
+            </div>
+
+            {productsLoading ? (
+              <div className="product-loading">Loading products...</div>
+            ) : form.items.length === 0 ? (
+              <div className="empty-state">
+                No products added. Click
+                <strong> Add Product</strong>.
+              </div>
+            ) : (
+              <div className="sale-items">
+                {form.items.map((item, index) => {
+                  const availableProducts = getAvailableProducts(index);
+
+                  return (
+                    <div className="sale-item-row" key={index}>
+                      {/* PRODUCT */}
+
+                      <div className="sale-item-product">
+                        <label>
+                          Product
+                          <SearchableSelect
+                            value={item.product}
+                            options={availableProducts.map((product) => ({
+                              value: product._id,
+                              label: product.name,
+                              rate: product.rate,
+                            }))}
+                            placeholder="Select Product"
+                            error={!!errors[`product_${index}`]}
+                            onChange={(value) =>
+                              handleProductChange(index, value)
+                            }
+                            renderOption={(option) => (
+                              <div className="product-option">
+                                <span>{option.label}</span>
+
+                                <span className="product-rate">
+                                  ₹{option.rate}
+                                </span>
+                              </div>
+                            )}
+                          />
+                          {errors[`product_${index}`] && (
+                            <small className="error-text">
+                              {errors[`product_${index}`]}
+                            </small>
+                          )}
+                        </label>
+                      </div>
+
+                      {/* QUANTITY */}
+
+                      <div className="sale-item-small">
+                        <label>
+                          Qty
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            className={
+                              errors[`quantity_${index}`] ? "input-error" : ""
+                            }
+                            onChange={(e) =>
+                              handleItemQuantityChange(index, e.target.value)
+                            }
+                          />
+                          {errors[`quantity_${index}`] && (
+                            <small className="error-text">
+                              {errors[`quantity_${index}`]}
+                            </small>
+                          )}
+                        </label>
+                      </div>
+
+                      {/* RATE */}
+
+                      <div className="sale-item-small">
+                        <label>
+                          Rate
+                          <input type="number" value={item.rate} readOnly />
+                        </label>
+                      </div>
+
+                      {/* AMOUNT */}
+
+                      <div className="sale-item-small">
+                        <label>
+                          Amount
+                          <input
+                            type="text"
+                            value={money(item.amount || 0)}
+                            readOnly
+                          />
+                        </label>
+                      </div>
+
+                      {/* DELETE */}
+
+                      <button
+                        type="button"
+                        className="icon danger"
+                        title="Remove product"
+                        onClick={() => removeProductItem(index)}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {errors.items && (
+              <small className="error-text">{errors.items}</small>
+            )}
+          </div>
+
+          {/* ======================================
+              TOTAL + SAVE
+          ====================================== */}
+
+          <div className="sale-footer">
+            <div className="sale-total">
+              <span>Total Amount</span>
+
+              <strong>{money(form.amount || 0)}</strong>
+            </div>
+
+            <div className="form-actions">
+              <button className="primary" type="submit" disabled={saving}>
+                <Plus size={18} />
+
+                {saving ? "Saving..." : "Save Sale"}
+              </button>
+            </div>
+          </div>
         </form>
       </section>
 
-      {/* ========================================
+      {/* ======================================
           SALES REGISTER
-      ======================================== */}
+      ====================================== */}
 
       <section className="panel">
         <div className="panel-head">
           <h3>Sales Register</h3>
 
           <div className="filters">
-            {/* MONTH */}
-
             <input
               type="month"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
             />
-
-            {/* SEARCH */}
 
             <input
               type="search"
@@ -615,72 +851,94 @@ function Sales() {
         {loading ? (
           <Loading />
         ) : (
-          <Table
-            headers={[
-              "Date",
-              "Type",
-              "Customer",
-              "Product",
-              "Qty",
-              "Rate",
-              "Amount",
-              "Payment",
-              "Status",
-              "",
-            ]}
-            rows={sales.map((sale) => (
-              <tr key={sale._id}>
-                {/* DATE */}
+          <>
+            <Table
+              headers={[
+                "Date",
+                "Type",
+                "Customer",
+                "Amount",
+                "Payment",
+                "Status",
+                "Action",
+              ]}
+              rows={paginatedSales.map((sale) => (
+                <tr key={sale._id}>
+                  {/* DATE */}
 
-                <td>{new Date(sale.date).toLocaleDateString("en-IN")}</td>
+                  <td>{new Date(sale.date).toLocaleDateString("en-IN")}</td>
 
-                {/* TYPE */}
+                  {/* TYPE */}
 
-                <td>{sale.type}</td>
+                  <td>{sale.type}</td>
 
-                {/* CUSTOMER */}
+                  {/* CUSTOMER */}
 
-                <td>{sale.customerName}</td>
+                  <td>{sale.customerName}</td>
 
-                {/* PRODUCT */}
+                  {/* AMOUNT */}
 
-                <td>{sale.product || "—"}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="amount-link"
+                      onClick={() => setSelectedSale(sale)}
+                      title="View sale details"
+                    >
+                      {money(sale.amount)}
+                    </button>
+                  </td>
 
-                {/* QTY */}
+                  {/* PAYMENT */}
 
-                <td>{sale.quantity || "—"}</td>
+                  <td>{sale.paymentMode}</td>
 
-                {/* RATE */}
+                  {/* STATUS */}
 
-                <td>{sale.rate ? money(sale.rate) : "—"}</td>
+                  <td>{sale.paymentStatus}</td>
 
-                {/* AMOUNT */}
+                  {/* ACTION */}
 
-                <td>{money(sale.amount)}</td>
+                  <td>
+                    <div className="table-actions">
+                      {canEdit && (
+                        <DeleteButton
+                          onDelete={() => del(sale._id)}
+                          itemName={`${sale.customerName} - ${
+                            sale.type
+                          } - ${new Date(sale.date).toLocaleDateString(
+                            "en-IN",
+                          )}`}
+                        />
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            />
 
-                {/* PAYMENT */}
+            {/* GLOBAL PAGINATION */}
 
-                <td>{sale.paymentMode}</td>
-
-                {/* STATUS */}
-
-                <td>{sale.paymentStatus}</td>
-
-                {/* DELETE */}
-
-                <td>
-                  {canEdit && (
-                    <DeleteButton
-                      onDelete={() => del(sale._id)}
-                      itemName={`${sale.customerName} - ${sale.type} - ${new Date(sale.date).toLocaleDateString("en-IN")}`}
-                    />
-                  )}
-                </td>
-              </tr>
-            ))}
-          />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={sales.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={handleItemsPerPageChange}
+            />
+          </>
         )}
       </section>
+
+      {/* ======================================
+          SALE DETAILS MODAL
+      ====================================== */}
+
+      <SaleDetailsModal
+        sale={selectedSale}
+        onClose={() => setSelectedSale(null)}
+      />
     </div>
   );
 }

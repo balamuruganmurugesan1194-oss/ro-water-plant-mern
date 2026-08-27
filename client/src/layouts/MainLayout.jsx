@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   ShoppingCart,
+  Package,
   Receipt,
   Users,
   LogOut,
@@ -12,10 +13,10 @@ import { useAuth } from "../context/AuthContext";
 
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/products", label: "Products", icon: ShoppingCart },
+  { to: "/products", label: "Products", icon: Package },
+  { to: "/parties", label: "Customers & Suppliers", icon: Users },
   { to: "/sales", label: "Sales", icon: ShoppingCart },
   { to: "/expenses", label: "Expenses", icon: Receipt },
-  { to: "/parties", label: "Customers & Suppliers", icon: Users },
 ];
 
 function MainLayout() {
