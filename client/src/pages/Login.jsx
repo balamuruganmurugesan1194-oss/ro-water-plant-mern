@@ -10,12 +10,8 @@ function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // If the user was redirected here from a protected route, send them
-  // back there after a successful login. Otherwise default to dashboard.
-  const from = location.state?.from?.pathname || "/dashboard";
-
-  const [email, setEmail] = useState("admin@rowater.local");
-  const [password, setPassword] = useState("Admin@123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -31,8 +27,22 @@ function Login() {
         password,
       });
 
-      login(response.data);
-      navigate(from, { replace: true });
+      const data = response.data;
+
+      // Save authentication data
+      login(data);
+
+      // Get role from login response
+      const role = data?.user?.role || data?.role;
+
+      // Redirect based on role
+      if (role === "admin") {
+        navigate("/dashboard", { replace: true });
+      } else if (role === "staff") {
+        navigate("/sales", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     } finally {
@@ -60,6 +70,8 @@ function Login() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
+            autoComplete="email"
             required
           />
         </label>
@@ -70,6 +82,8 @@ function Login() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
+            autoComplete="current-password"
             required
           />
         </label>
@@ -77,8 +91,6 @@ function Login() {
         <button className="primary" type="submit" disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </button>
-
-        <small>Demo: admin@rowater.local / Admin@123</small>
       </form>
     </div>
   );

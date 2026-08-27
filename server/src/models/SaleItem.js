@@ -37,6 +37,6 @@ const saleItemSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
-saleItemSchema.index({ sale: 1 });
+// saleItemSchema.index({ sale: 1 });
 saleItemSchema.index({ product: 1 });
 export default mongoose.model("SaleItem", saleItemSchema);

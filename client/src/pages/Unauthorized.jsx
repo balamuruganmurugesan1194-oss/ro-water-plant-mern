@@ -9,8 +9,8 @@ function Unauthorized() {
         <ShieldAlert size={40} />
         <h2>Access denied</h2>
         <p>You don't have permission to view this page.</p>
-        <Link className="primary" to="/dashboard">
-          Back to Dashboard
+        <Link className="primary" to="/login">
+          Back to Login
         </Link>
       </div>
     </div>

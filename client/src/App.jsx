@@ -19,25 +19,41 @@ function App() {
   return (
     <AuthProvider>
       <Routes>
+        {/* Public Pages */}
         <Route path="/login" element={<Login />} />
-
         <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route path="/not-found" element={<NotFound />} />
 
-        <Route element={<ProtectedRoute />}>
+        {/* Admin + Staff Pages */}
+        <Route
+          element={
+            <ProtectedRoute allowedRoles={["admin", "staff"]} />
+          }
+        >
           <Route element={<MainLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/products" element={<Products />} />
             <Route path="/sales" element={<Sales />} />
-            <Route path="/expenses" element={<Expenses />} />
             <Route path="/parties" element={<Parties />} />
           </Route>
         </Route>
 
+        {/* Admin Only Pages */}
+        <Route
+          element={<ProtectedRoute allowedRoles={["admin"]} />}
+        >
+          <Route element={<MainLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/expenses" element={<Expenses />} />
+          </Route>
+        </Route>
+
+        {/* Root */}
         <Route
           path="/"
           element={<Navigate to="/dashboard" replace />}
         />
 
+        {/* Invalid URL */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AuthProvider>
