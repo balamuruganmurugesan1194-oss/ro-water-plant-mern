@@ -8,7 +8,7 @@ import MainLayout from "./layouts/MainLayout";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import Sales from "./pages/Sales";
+import Sales from "./pages/sales/Sales";
 import Expenses from "./pages/Expenses";
 import Parties from "./pages/Parties";
 import Products from "./pages/Products";

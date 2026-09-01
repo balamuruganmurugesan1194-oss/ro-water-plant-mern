@@ -39,7 +39,8 @@ function Sales() {
 
   const [type, setType] = useState("retail");
 
-  const [month, setMonth] = useState("2026-08");
+  // const [month, setMonth] = useState("2026-08");
+  const [month, setMonth] = useState(() => today().slice(0, 7));
 
   const [search, setSearch] = useState("");
 

@@ -14,7 +14,8 @@ function Expenses() {
   const canEdit = role === "admin";
 
   const [items, setItems] = useState([]);
-  const [month, setMonth] = useState("2026-08");
+  // const [month, setMonth] = useState("2026-08");
+  const [month, setMonth] = useState(() => today().slice(0, 7));
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
   // ==========================================
