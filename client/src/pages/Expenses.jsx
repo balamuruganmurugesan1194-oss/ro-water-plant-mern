@@ -1,28 +1,42 @@
 import React, { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { money, today } from "../utils/helpers";
+
 import Table from "../components/Table";
 import Pagination from "../components/Pagination";
 import expenseCategory from "../data/expense.json";
 import DeleteButton from "../components/DeleteButton";
 import SearchableSelect from "../components/SearchableSelect";
+import ExportButtons from "../components/ExportButtons";
+
 function Expenses() {
   const { role } = useAuth();
+
   const canEdit = role === "admin";
 
+  // ==========================================
+  // STATE
+  // ==========================================
+
   const [items, setItems] = useState([]);
-  // const [month, setMonth] = useState("2026-08");
+
   const [month, setMonth] = useState(() => today().slice(0, 7));
+
+  const [search, setSearch] = useState("");
+
   const [saving, setSaving] = useState(false);
+
   const [errors, setErrors] = useState({});
+
   // ==========================================
   // PAGINATION
   // ==========================================
 
   const [currentPage, setCurrentPage] = useState(1);
+
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // ==========================================
@@ -61,14 +75,52 @@ function Expenses() {
 
   useEffect(() => {
     setCurrentPage(1);
+
+    setSearch("");
+
     load();
   }, [month]);
+
+  // ==========================================
+  // SEARCH
+  // ==========================================
+
+  const filteredItems = items.filter((item) => {
+    const searchValue = search.toLowerCase().trim();
+
+    if (!searchValue) {
+      return true;
+    }
+
+    const date = item.date
+      ? new Date(item.date).toLocaleDateString("en-IN").toLowerCase()
+      : "";
+
+    const category = item.category?.toLowerCase() || "";
+
+    const vendor = item.vendor?.toLowerCase() || "";
+
+    const notes = item.notes?.toLowerCase() || "";
+
+    const amount =
+      item.amount !== undefined && item.amount !== null
+        ? String(item.amount).toLowerCase()
+        : "";
+
+    return (
+      date.includes(searchValue) ||
+      category.includes(searchValue) ||
+      vendor.includes(searchValue) ||
+      notes.includes(searchValue) ||
+      amount.includes(searchValue)
+    );
+  });
 
   // ==========================================
   // PAGINATION
   // ==========================================
 
-  const totalItems = items.length;
+  const totalItems = filteredItems.length;
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
@@ -76,7 +128,7 @@ function Expenses() {
 
   const endIndex = startIndex + itemsPerPage;
 
-  const paginatedItems = items.slice(startIndex, endIndex);
+  const paginatedItems = filteredItems.slice(startIndex, endIndex);
 
   // ==========================================
   // PAGE CHANGE
@@ -97,6 +149,17 @@ function Expenses() {
 
   const handleItemsPerPageChange = (value) => {
     setItemsPerPage(value);
+
+    setCurrentPage(1);
+  };
+
+  // ==========================================
+  // SEARCH CHANGE
+  // ==========================================
+
+  const handleSearchChange = (value) => {
+    setSearch(value);
+
     setCurrentPage(1);
   };
 
@@ -115,10 +178,18 @@ function Expenses() {
         amount: Number(form.amount),
       });
 
+      // Reset form
       setForm(blank);
 
+      setErrors({});
+
+      // Reset search
+      setSearch("");
+
+      // Go to first page
       setCurrentPage(1);
 
+      // Reload list
       await load();
     } catch (err) {
       console.error("Failed to save expense:", err);
@@ -154,6 +225,11 @@ function Expenses() {
       alert(err?.response?.data?.message || "Failed to delete expense");
     }
   };
+
+  // ==========================================
+  // HANDLE FORM CHANGE
+  // ==========================================
+
   const handleChange = (name, value) => {
     setForm((prev) => ({
       ...prev,
@@ -165,6 +241,40 @@ function Expenses() {
       [name]: "",
     }));
   };
+
+  // ==========================================
+  // EXPORT COLUMNS
+  // ==========================================
+
+  const expenseExportColumns = [
+    {
+      key: "date",
+      label: "Date",
+      type: "date",
+    },
+
+    {
+      key: "category",
+      label: "Category",
+    },
+
+    {
+      key: "amount",
+      label: "Amount",
+      type: "currency",
+    },
+
+    {
+      key: "vendor",
+      label: "Vendor",
+    },
+
+    {
+      key: "notes",
+      label: "Notes",
+    },
+  ];
+
   // ==========================================
   // RENDER
   // ==========================================
@@ -267,25 +377,62 @@ function Expenses() {
           <h3>Expense Register</h3>
 
           <div className="filters">
+            {/* ======================================
+                MONTH FILTER
+            ====================================== */}
+
             <input
               type="month"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
             />
 
-            {/* <input
-      type="search"
-      placeholder="Search item/category..."
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-    /> */}
+            {/* ======================================
+                SEARCH
+            ====================================== */}
+
+            <div className="search-box">
+              <Search size={17} />
+
+              <input
+                type="search"
+                placeholder="Search category, vendor, notes..."
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+              />
+            </div>
+                        {/* ======================================
+                EXPORT BUTTONS
+            ====================================== */}
+
+            <ExportButtons
+              data={items}
+              columns={expenseExportColumns}
+              title="Expense Register"
+              fileName={`Expense_Register_${month}`}
+              sheetName="Expenses"
+              filters={{
+                Month: month,
+                Search: search || "All",
+              }}
+            />
           </div>
         </div>
 
+        {/* ==========================================
+            EMPTY STATE
+        ========================================== */}
+
         {items.length === 0 ? (
           <div className="empty-state">No expenses found for this month.</div>
+        ) : filteredItems.length === 0 ? (
+          <div className="empty-state">No matching expenses found.</div>
         ) : (
           <>
+            {/* ======================================
+                TABLE
+            ====================================== */}
+
             <Table
               headers={["Date", "Category", "Amount", "Vendor", "Notes", ""]}
               rows={paginatedItems.map((x) => (
@@ -326,9 +473,9 @@ function Expenses() {
               ))}
             />
 
-            {/* ==================================
-                GLOBAL PAGINATION
-            ================================== */}
+            {/* ======================================
+                PAGINATION
+            ====================================== */}
 
             <Pagination
               currentPage={currentPage}

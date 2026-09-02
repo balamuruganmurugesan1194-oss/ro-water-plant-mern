@@ -4,13 +4,15 @@ import Table from "../../components/Table";
 import Loading from "../../components/Loading";
 import Pagination from "../../components/Pagination";
 import DeleteButton from "../../components/DeleteButton";
-
 import { money } from "../../utils/helpers";
+import ExportButtons from "../../components/ExportButtons";
 
 function SalesRegister({
   sales,
+  allSales,
   loading,
   month,
+  type,
   search,
   currentPage,
   totalPages,
@@ -24,6 +26,44 @@ function SalesRegister({
   onDelete,
   onViewSale,
 }) {
+  const salesExportColumns = [
+    {
+      key: "date",
+      label: "Date",
+      type: "date",
+    },
+
+    {
+      key: "partyName",
+      label: "Party Name",
+    },
+
+    {
+      key: "type",
+      label: "Type",
+    },
+
+    {
+      key: "paymentMode",
+      label: "Payment Mode",
+    },
+
+    {
+      key: "paymentStatus",
+      label: "Payment Status",
+    },
+
+    {
+      key: "amount",
+      label: "Amount",
+      type: "currency",
+    },
+
+    {
+      key: "notes",
+      label: "Notes",
+    },
+  ];
   return (
     <section className="panel">
       <div className="panel-head">
@@ -41,6 +81,18 @@ function SalesRegister({
             placeholder="Search party/product..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
+          />
+          <ExportButtons
+            data={allSales}
+            columns={salesExportColumns}
+            title="Sales Register"
+            fileName={`Sales_Register_${month}`}
+            sheetName="Sales Register"
+            filters={{
+              Month: month,
+              Type: type,
+              Search: search,
+            }}
           />
         </div>
       </div>

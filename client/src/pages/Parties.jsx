@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 
 import api from "../api/client";
 import Table from "../components/Table";
 import DeleteButton from "../components/DeleteButton";
 import Pagination from "../components/Pagination";
+import ExportButtons from "../components/ExportButtons";
 
 function Parties() {
   const [type, setType] = useState("customer");
   const [items, setItems] = useState([]);
+
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
+  const [search, setSearch] = useState("");
 
   // ==========================================
   // PAGINATION
@@ -18,6 +21,10 @@ function Parties() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // ==========================================
+  // INITIAL FORM
+  // ==========================================
 
   const initialForm = {
     code: "",
@@ -39,20 +46,46 @@ function Parties() {
       setItems(response.data || []);
     } catch (err) {
       console.error("Failed to load parties:", err);
+
       setItems([]);
     }
   };
 
+  // ==========================================
+  // LOAD WHEN TYPE CHANGES
+  // ==========================================
+
   useEffect(() => {
     setCurrentPage(1);
+    setSearch("");
+
     load();
   }, [type]);
+
+  // ==========================================
+  // SEARCH
+  // ==========================================
+
+  const filteredItems = items.filter((item) => {
+    const searchValue = search.toLowerCase().trim();
+
+    if (!searchValue) {
+      return true;
+    }
+
+    return (
+      item.code?.toLowerCase().includes(searchValue) ||
+      item.name?.toLowerCase().includes(searchValue) ||
+      item.contactNumber?.includes(searchValue) ||
+      item.address?.toLowerCase().includes(searchValue)
+    );
+  });
 
   // ==========================================
   // PAGINATION CALCULATION
   // ==========================================
 
-  const totalItems = items.length;
+  const totalItems = filteredItems.length;
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
@@ -60,7 +93,7 @@ function Parties() {
 
   const endIndex = startIndex + itemsPerPage;
 
-  const paginatedItems = items.slice(startIndex, endIndex);
+  const paginatedItems = filteredItems.slice(startIndex, endIndex);
 
   // ==========================================
   // HANDLE CHANGE
@@ -174,7 +207,11 @@ function Parties() {
 
       // Reset form
       setForm(initialForm);
+
       setErrors({});
+
+      // Reset search
+      setSearch("");
 
       // Go to first page
       setCurrentPage(1);
@@ -222,6 +259,8 @@ function Parties() {
   const handleTypeChange = (newType) => {
     setType(newType);
 
+    setSearch("");
+
     setErrors({});
 
     setForm(initialForm);
@@ -251,6 +290,39 @@ function Parties() {
 
     setCurrentPage(1);
   };
+
+  // ==========================================
+  // EXPORT COLUMNS
+  // ==========================================
+
+  const partyExportColumns = [
+    {
+      key: "code",
+      label: "Code",
+    },
+
+    {
+      key: "name",
+      label: "Party Name",
+    },
+
+    {
+      key: "type",
+      label: "Type",
+      value: (row) =>
+        row.type ? row.type.charAt(0).toUpperCase() + row.type.slice(1) : "",
+    },
+
+    {
+      key: "contactNumber",
+      label: "Contact No",
+    },
+
+    {
+      key: "address",
+      label: "Area",
+    },
+  ];
 
   // ==========================================
   // RENDER
@@ -380,14 +452,64 @@ function Parties() {
       <section className="panel">
         <div className="panel-head">
           <h3>{type === "customer" ? "Customers" : "Suppliers"}</h3>
+
+          {/* ======================================
+              FILTERS
+          ====================================== */}
+
+          <div className="filters">
+            {/* SEARCH */}
+
+            <div className="search-box">
+              <Search size={17} />
+
+              <input
+                type="search"
+                placeholder={`Search ${
+                  type === "customer" ? "customer" : "supplier"
+                }...`}
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+            {/* EXPORT BUTTONS */}
+
+            <ExportButtons
+              data={items}
+              columns={partyExportColumns}
+              title={
+                type === "customer" ? "Customer Register" : "Supplier Register"
+              }
+              fileName={
+                type === "customer" ? "Customer_Register" : "Supplier_Register"
+              }
+              sheetName={type === "customer" ? "Customers" : "Suppliers"}
+            />
+          </div>
         </div>
+
+        {/* ========================================
+            EMPTY STATE
+        ======================================== */}
 
         {items.length === 0 ? (
           <div className="empty-state">
             No {type === "customer" ? "customers" : "suppliers"} found.
           </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="empty-state">
+            No matching {type === "customer" ? "customers" : "suppliers"} found.
+          </div>
         ) : (
           <>
+            {/* ==================================
+                TABLE
+            ================================== */}
+
             <Table
               headers={["Code", "Name", "Contact No", "Area", "Actions"]}
               rows={paginatedItems.map((x) => (
@@ -413,7 +535,7 @@ function Parties() {
             />
 
             {/* ==================================
-                GLOBAL PAGINATION
+                PAGINATION
             ================================== */}
 
             <Pagination

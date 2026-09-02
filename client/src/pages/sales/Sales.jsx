@@ -420,8 +420,10 @@ function Sales() {
 
       <SalesRegister
         sales={paginatedSales}
+        allSales={sales}
         loading={loading}
         month={month}
+        type={type}
         search={search}
         currentPage={currentPage}
         totalPages={totalPages}
