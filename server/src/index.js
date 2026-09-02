@@ -17,6 +17,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
+      "http://localhost:8081",
       "https://my-mern-app.vercel.app",
       "https://ro-water-plant-mern.vercel.app"
     ],
