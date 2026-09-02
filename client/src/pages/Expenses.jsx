@@ -266,11 +266,20 @@ function Expenses() {
         <div className="panel-head">
           <h3>Expense Register</h3>
 
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-          />
+          <div className="filters">
+            <input
+              type="month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+            />
+
+            {/* <input
+      type="search"
+      placeholder="Search item/category..."
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+    /> */}
+          </div>
         </div>
 
         {items.length === 0 ? (

@@ -26,29 +26,22 @@ function SalesRegister({
 }) {
   return (
     <section className="panel">
-
       <div className="panel-head">
         <h3>Sales Register</h3>
 
         <div className="filters">
-
           <input
             type="month"
             value={month}
-            onChange={(e) =>
-              onMonthChange(e.target.value)
-            }
+            onChange={(e) => onMonthChange(e.target.value)}
           />
 
           <input
             type="search"
-            placeholder="Search customer/product..."
+            placeholder="Search party/product..."
             value={search}
-            onChange={(e) =>
-              onSearchChange(e.target.value)
-            }
+            onChange={(e) => onSearchChange(e.target.value)}
           />
-
         </div>
       </div>
 
@@ -60,7 +53,7 @@ function SalesRegister({
             headers={[
               "Date",
               "Type",
-              "Customer",
+              "Party",
               "Amount",
               "Payment",
               "Status",
@@ -68,52 +61,36 @@ function SalesRegister({
             ]}
             rows={sales.map((sale) => (
               <tr key={sale._id}>
-
-                <td>
-                  {new Date(
-                    sale.date
-                  ).toLocaleDateString("en-IN")}
-                </td>
+                <td>{new Date(sale.date).toLocaleDateString("en-IN")}</td>
 
                 <td>{sale.type}</td>
 
-                <td>{sale.customerName}</td>
+                <td>{sale.partyName}</td>
 
                 <td>
                   <button
                     type="button"
                     className="amount-link"
-                    onClick={() =>
-                      onViewSale(sale)
-                    }
+                    onClick={() => onViewSale(sale)}
                   >
                     {money(sale.amount)}
                   </button>
                 </td>
 
-                <td>
-                  {sale.paymentMode}
-                </td>
+                <td>{sale.paymentMode}</td>
 
-                <td>
-                  {sale.paymentStatus}
-                </td>
+                <td>{sale.paymentStatus}</td>
 
                 <td>
                   <div className="table-actions">
-
                     {canEdit && (
                       <DeleteButton
-                        onDelete={() =>
-                          onDelete(sale._id)
-                        }
-                        itemName={`${sale.customerName} - ${sale.type}`}
+                        onDelete={() => onDelete(sale._id)}
+                        itemName={`${sale.partyName} - ${sale.type}`}
                       />
                     )}
-
                   </div>
                 </td>
-
               </tr>
             ))}
           />
@@ -124,13 +101,10 @@ function SalesRegister({
             totalItems={totalItems}
             itemsPerPage={itemsPerPage}
             onPageChange={onPageChange}
-            onItemsPerPageChange={
-              onItemsPerPageChange
-            }
+            onItemsPerPageChange={onItemsPerPageChange}
           />
         </>
       )}
-
     </section>
   );
 }

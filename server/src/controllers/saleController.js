@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
+
 import Sale from "../models/Sale.js";
 import SaleItem from "../models/SaleItem.js";
+import Party from "../models/Party.js";
+import Product from "../models/Product.js";
 
 // ==========================================
 // GET SALES
@@ -11,51 +14,72 @@ export const getSales = async (req, res) => {
   try {
     const { month, type, search } = req.query;
 
-    const filter = {};
+    const filter = {
+      isDeleted: false,
+    };
 
-    // ------------------------------------------
-    // Type filter
-    // ------------------------------------------
+    // ========================================
+    // TYPE
+    // ========================================
 
     if (type) {
       filter.type = type;
     }
 
-    // ------------------------------------------
-    // Month filter
-    // ------------------------------------------
+    // ========================================
+    // MONTH
+    // ========================================
 
     if (month) {
       const [year, m] = month.split("-").map(Number);
 
       filter.date = {
         $gte: new Date(year, m - 1, 1),
+
         $lt: new Date(year, m, 1),
       };
     }
 
-    // ------------------------------------------
-    // Search
-    // ------------------------------------------
+    // ========================================
+    // SEARCH PARTY
+    // ========================================
 
     if (search?.trim()) {
       const searchText = search.trim();
 
+      const matchingParties = await Party.find({
+        name: {
+          $regex: searchText,
+          $options: "i",
+        },
+      })
+        .select("_id")
+        .lean();
+
+      const partyIds = matchingParties.map((party) => party._id);
+
       filter.$or = [
         {
-          customerName: {
+          partyName: {
             $regex: searchText,
             $options: "i",
+          },
+        },
+
+        {
+          partyId: {
+            $in: partyIds,
           },
         },
       ];
     }
 
-    // ------------------------------------------
-    // Get sales
-    // ------------------------------------------
+    // ========================================
+    // GET SALES
+    // ========================================
 
     const sales = await Sale.find(filter)
+      .populate("partyId", "name type")
       .sort({
         date: -1,
         createdAt: -1,
@@ -63,21 +87,23 @@ export const getSales = async (req, res) => {
       .limit(500)
       .lean();
 
-    // ------------------------------------------
-    // Get sale items
-    // ------------------------------------------
+    // ========================================
+    // GET SALE ITEMS
+    // ========================================
 
     const saleIds = sales.map((sale) => sale._id);
 
     const saleItems = await SaleItem.find({
-      sale: { $in: saleIds },
+      sale: {
+        $in: saleIds,
+      },
     })
       .populate("product")
       .lean();
 
-    // ------------------------------------------
-    // Attach items to each sale
-    // ------------------------------------------
+    // ========================================
+    // ATTACH ITEMS
+    // ========================================
 
     const salesWithItems = sales.map((sale) => ({
       ...sale,
@@ -106,7 +132,8 @@ export const createSale = async (req, res) => {
   try {
     const {
       date,
-      customerName,
+      partyId,
+      partyName,
       type,
       items,
       paymentMode,
@@ -114,9 +141,9 @@ export const createSale = async (req, res) => {
       notes,
     } = req.body;
 
-    // ==========================================
-    // BASIC VALIDATION
-    // ==========================================
+    // ========================================
+    // DATE
+    // ========================================
 
     if (!date) {
       return res.status(400).json({
@@ -124,11 +151,9 @@ export const createSale = async (req, res) => {
       });
     }
 
-    if (!customerName?.trim()) {
-      return res.status(400).json({
-        message: "Customer name is required",
-      });
-    }
+    // ========================================
+    // TYPE
+    // ========================================
 
     if (!type) {
       return res.status(400).json({
@@ -142,6 +167,94 @@ export const createSale = async (req, res) => {
       });
     }
 
+    // ========================================
+    // PARTY
+    // ========================================
+
+    if (!partyName?.trim()) {
+      return res.status(400).json({
+        message: "Party name is required",
+      });
+    }
+
+    let finalPartyId = null;
+
+    let finalPartyName = partyName.trim();
+
+    // ========================================
+    // RETAIL
+    // Customer Party
+    // ========================================
+
+    if (type === "retail") {
+      if (!partyId || !mongoose.Types.ObjectId.isValid(partyId)) {
+        return res.status(400).json({
+          message: "Valid customer is required",
+        });
+      }
+
+      const customer = await Party.findOne({
+        _id: partyId,
+
+        type: "customer",
+      }).lean();
+
+      if (!customer) {
+        return res.status(400).json({
+          message: "Customer not found",
+        });
+      }
+
+      finalPartyId = customer._id;
+
+      finalPartyName = customer.name;
+    }
+
+    // ========================================
+    // SUPPLIER
+    // ========================================
+
+    if (type === "supplier") {
+      if (!partyId || !mongoose.Types.ObjectId.isValid(partyId)) {
+        return res.status(400).json({
+          message: "Valid supplier is required",
+        });
+      }
+
+      const supplier = await Party.findOne({
+        _id: partyId,
+
+        type: "supplier",
+      }).lean();
+
+      if (!supplier) {
+        return res.status(400).json({
+          message: "Supplier not found",
+        });
+      }
+
+      finalPartyId = supplier._id;
+
+      finalPartyName = supplier.name;
+    }
+
+    // ========================================
+    // OTHER
+    //
+    // partyId remains null
+    // partyName is entered manually
+    // ========================================
+
+    if (type === "other") {
+      finalPartyId = null;
+
+      finalPartyName = partyName.trim();
+    }
+
+    // ========================================
+    // PAYMENT
+    // ========================================
+
     if (!paymentMode) {
       return res.status(400).json({
         message: "Payment mode is required",
@@ -154,9 +267,9 @@ export const createSale = async (req, res) => {
       });
     }
 
-    // ==========================================
-    // ITEMS VALIDATION
-    // ==========================================
+    // ========================================
+    // ITEMS
+    // ========================================
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
@@ -164,30 +277,42 @@ export const createSale = async (req, res) => {
       });
     }
 
-    // ==========================================
-    // VALIDATE ITEMS
-    // ==========================================
+    // ========================================
+    // CLEAN ITEMS
+    // ========================================
 
     const cleanedItems = [];
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
-      if (!item.product?.trim()) {
+      // Product ID
+      if (!item.product || !mongoose.Types.ObjectId.isValid(item.product)) {
         return res.status(400).json({
-          message: `Product is required for item ${i + 1}`,
+          message: `Valid product is required for item ${i + 1}`,
         });
       }
 
-      const quantity = Number(item.quantity);
+      // Check product
+      const product = await Product.findById(item.product).lean();
 
-      const rate = Number(item.rate);
+      if (!product) {
+        return res.status(400).json({
+          message: `Product not found for item ${i + 1}`,
+        });
+      }
+
+      // Quantity
+      const quantity = Number(item.quantity);
 
       if (!Number.isFinite(quantity) || quantity <= 0) {
         return res.status(400).json({
           message: `Quantity must be greater than 0 for item ${i + 1}`,
         });
       }
+
+      // Rate
+      const rate = Number(item.rate);
 
       if (!Number.isFinite(rate) || rate <= 0) {
         return res.status(400).json({
@@ -198,16 +323,19 @@ export const createSale = async (req, res) => {
       const amount = quantity * rate;
 
       cleanedItems.push({
-        product: item.product.trim(),
+        product: item.product,
+
         quantity,
+
         rate,
+
         amount,
       });
     }
 
-    // ==========================================
-    // CALCULATE TOTAL
-    // ==========================================
+    // ========================================
+    // TOTAL
+    // ========================================
 
     const totalAmount = cleanedItems.reduce(
       (total, item) => total + item.amount,
@@ -220,16 +348,18 @@ export const createSale = async (req, res) => {
       });
     }
 
-    // ==========================================
+    // ========================================
     // CREATE SALE
-    // ==========================================
+    // ========================================
 
     const sale = await Sale.create({
       type,
 
       date: new Date(date),
 
-      customerName: customerName.trim(),
+      partyId: finalPartyId,
+
+      partyName: finalPartyName,
 
       amount: totalAmount,
 
@@ -239,12 +369,18 @@ export const createSale = async (req, res) => {
 
       notes: notes?.trim() || "",
 
-      createdBy: req.user?.id,
+      createdBy: req.user?.id || req.user?._id,
+
+      isDeleted: false,
+
+      deletedAt: null,
+
+      deletedBy: null,
     });
 
-    // ==========================================
-    // CREATE SALE ITEMS
-    // ==========================================
+    // ========================================
+    // CREATE ITEMS
+    // ========================================
 
     const saleItems = cleanedItems.map((item) => ({
       sale: sale._id,
@@ -260,9 +396,9 @@ export const createSale = async (req, res) => {
 
     const createdItems = await SaleItem.insertMany(saleItems);
 
-    // ==========================================
+    // ========================================
     // RESPONSE
-    // ==========================================
+    // ========================================
 
     res.status(201).json({
       message: "Sale created successfully",
@@ -297,7 +433,14 @@ export const getSaleById = async (req, res) => {
       });
     }
 
-    const sale = await Sale.findById(id).lean();
+    const sale = await Sale.findOne({
+      _id: id,
+
+      isDeleted: false,
+    })
+      .populate("partyId", "name type")
+      .populate("createdBy", "name email")
+      .lean();
 
     if (!sale) {
       return res.status(404).json({
@@ -307,10 +450,13 @@ export const getSaleById = async (req, res) => {
 
     const items = await SaleItem.find({
       sale: sale._id,
-    }).lean();
+    })
+      .populate("product")
+      .lean();
 
     res.status(200).json({
       ...sale,
+
       items,
     });
   } catch (error) {
@@ -323,7 +469,7 @@ export const getSaleById = async (req, res) => {
 };
 
 // ==========================================
-// DELETE SALE
+// SOFT DELETE SALE
 // DELETE /api/sales/:id
 // ==========================================
 
@@ -337,11 +483,15 @@ export const deleteSale = async (req, res) => {
       });
     }
 
-    // ------------------------------------------
-    // Find sale
-    // ------------------------------------------
+    // ========================================
+    // FIND ACTIVE SALE
+    // ========================================
 
-    const sale = await Sale.findById(id);
+    const sale = await Sale.findOne({
+      _id: id,
+
+      isDeleted: false,
+    });
 
     if (!sale) {
       return res.status(404).json({
@@ -349,30 +499,44 @@ export const deleteSale = async (req, res) => {
       });
     }
 
-    // ------------------------------------------
-    // Delete sale items
-    // ------------------------------------------
+    // ========================================
+    // SOFT DELETE
+    // ========================================
 
-    await SaleItem.deleteMany({
-      sale: sale._id,
-    });
+    sale.isDeleted = true;
 
-    // ------------------------------------------
-    // Delete sale
-    // ------------------------------------------
+    sale.deletedAt = new Date();
 
-    await Sale.findByIdAndDelete(id);
+    sale.deletedBy = req.user?.id || req.user?._id || null;
 
-    // ------------------------------------------
-    // Response
-    // ------------------------------------------
+    await sale.save();
+
+    // ========================================
+    // DO NOT DELETE SALE ITEMS
+    // ========================================
+    //
+    // SaleItems remain in DB.
+    // This preserves history.
+    //
+    // ========================================
 
     res.status(200).json({
       ok: true,
+
       message: "Sale deleted successfully",
+
+      sale: {
+        _id: sale._id,
+
+        isDeleted: sale.isDeleted,
+
+        deletedAt: sale.deletedAt,
+
+        deletedBy: sale.deletedBy,
+      },
     });
   } catch (error) {
-    console.error("DELETE SALE ERROR:", error);
+    console.error("SOFT DELETE SALE ERROR:", error);
 
     res.status(500).json({
       message: error.message,

@@ -21,29 +21,29 @@ function Sales() {
   const [products, setProducts] = useState([]);
 
   const [customers, setCustomers] = useState([]);
-
   const [suppliers, setSuppliers] = useState([]);
 
   const [type, setType] = useState("retail");
 
-  const [month, setMonth] = useState(() => today().slice(0, 7));
+  const [month, setMonth] = useState(() =>
+    today().slice(0, 7),
+  );
 
   const [search, setSearch] = useState("");
 
   const [loading, setLoading] = useState(false);
-
-  const [productsLoading, setProductsLoading] = useState(false);
-
+  const [productsLoading, setProductsLoading] =
+    useState(false);
   const [saving, setSaving] = useState(false);
 
-  const [selectedSale, setSelectedSale] = useState(null);
+  const [selectedSale, setSelectedSale] =
+    useState(null);
 
   const [currentPage, setCurrentPage] = useState(1);
-
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] =
+    useState(10);
 
   const throttleTimeoutRef = useRef(null);
-
   const lastSearchTimeRef = useRef(0);
 
   // ==========================================
@@ -53,9 +53,13 @@ function Sales() {
   const createBlankForm = () => ({
     date: today(),
 
-    customerId: "",
+    // Only used in frontend
+    // Backend receives partyId
+    partyId: "",
 
-    customerName: "",
+    // Only used in frontend
+    // Backend receives partyName
+    partyName: "",
 
     items: [],
 
@@ -68,7 +72,8 @@ function Sales() {
     amount: 0,
   });
 
-  const [form, setForm] = useState(createBlankForm());
+  const [form, setForm] =
+    useState(createBlankForm());
 
   const [errors, setErrors] = useState({});
 
@@ -80,16 +85,26 @@ function Sales() {
     try {
       const response = await api.get("/parties");
 
-      const data = response.data?.data || response.data || [];
+      const data =
+        response.data?.data ||
+        response.data ||
+        [];
 
-      const customerList = data.filter((party) => party.type === "customer");
+      const customerList = data.filter(
+        (party) => party.type === "customer",
+      );
 
-      const supplierList = data.filter((party) => party.type === "supplier");
+      const supplierList = data.filter(
+        (party) => party.type === "supplier",
+      );
 
       setCustomers(customerList);
       setSuppliers(supplierList);
     } catch (error) {
-      console.error("Failed to load parties:", error);
+      console.error(
+        "Failed to load parties:",
+        error,
+      );
 
       setCustomers([]);
       setSuppliers([]);
@@ -104,11 +119,16 @@ function Sales() {
     try {
       setProductsLoading(true);
 
-      const response = await api.get("/products?active=true");
+      const response = await api.get(
+        "/products?active=true",
+      );
 
       setProducts(response.data || []);
     } catch (error) {
-      console.error("Failed to load products:", error);
+      console.error(
+        "Failed to load products:",
+        error,
+      );
 
       setProducts([]);
     } finally {
@@ -120,7 +140,9 @@ function Sales() {
   // LOAD SALES
   // ==========================================
 
-  const loadSales = async (searchValue = search) => {
+  const loadSales = async (
+    searchValue = search,
+  ) => {
     try {
       setLoading(true);
 
@@ -132,7 +154,10 @@ function Sales() {
 
       setSales(response.data || []);
     } catch (error) {
-      console.error("Failed to load sales:", error);
+      console.error(
+        "Failed to load sales:",
+        error,
+      );
 
       setSales([]);
     } finally {
@@ -166,21 +191,30 @@ function Sales() {
   useEffect(() => {
     const now = Date.now();
 
-    const elapsed = now - lastSearchTimeRef.current;
+    const elapsed =
+      now - lastSearchTimeRef.current;
 
-    const delay = elapsed >= 500 ? 0 : 500 - elapsed;
+    const delay =
+      elapsed >= 500 ? 0 : 500 - elapsed;
 
-    clearTimeout(throttleTimeoutRef.current);
+    clearTimeout(
+      throttleTimeoutRef.current,
+    );
 
-    throttleTimeoutRef.current = setTimeout(() => {
-      lastSearchTimeRef.current = Date.now();
+    throttleTimeoutRef.current =
+      setTimeout(() => {
+        lastSearchTimeRef.current =
+          Date.now();
 
-      setCurrentPage(1);
+        setCurrentPage(1);
 
-      loadSales(search);
-    }, delay);
+        loadSales(search);
+      }, delay);
 
-    return () => clearTimeout(throttleTimeoutRef.current);
+    return () =>
+      clearTimeout(
+        throttleTimeoutRef.current,
+      );
   }, [search]);
 
   // ==========================================
@@ -208,35 +242,69 @@ function Sales() {
       const payload = {
         date: saleForm.date,
 
-        customerId: saleForm.customerId || null,
+        // =====================================
+        // PARTY
+        // =====================================
 
-        customerName: saleForm.customerName.trim(),
+        partyId:
+          saleForm.partyId || null,
+
+        partyName:
+          saleForm.partyName?.trim() || "",
 
         type,
 
-        items: saleForm.items.map((item) => ({
-          product: item.product,
+        // =====================================
+        // PRODUCTS
+        // =====================================
 
-          quantity: Number(item.quantity),
+        items: saleForm.items.map(
+          (item) => ({
+            product: item.product,
 
-          rate: Number(item.rate),
+            quantity: Number(
+              item.quantity,
+            ),
 
-          amount: Number(item.quantity) * Number(item.rate),
-        })),
+            rate: Number(item.rate),
 
-        amount: saleForm.items.reduce(
-          (total, item) => total + Number(item.quantity) * Number(item.rate),
-          0,
+            amount:
+              Number(item.quantity) *
+              Number(item.rate),
+          }),
         ),
 
-        paymentMode: saleForm.paymentMode,
+        amount:
+          saleForm.items.reduce(
+            (total, item) =>
+              total +
+              Number(item.quantity) *
+                Number(item.rate),
+            0,
+          ),
 
-        paymentStatus: saleForm.paymentStatus,
+        // =====================================
+        // PAYMENT
+        // =====================================
 
-        notes: saleForm.notes,
+        paymentMode:
+          saleForm.paymentMode,
+
+        paymentStatus:
+          saleForm.paymentStatus,
+
+        // =====================================
+        // NOTES
+        // =====================================
+
+        notes:
+          saleForm.notes?.trim() || "",
       };
 
-      await api.post("/sales", payload);
+      await api.post(
+        "/sales",
+        payload,
+      );
 
       setForm(createBlankForm());
 
@@ -246,33 +314,65 @@ function Sales() {
 
       await loadSales(search);
     } catch (error) {
-      console.error("Failed to save sale:", error);
+      console.error(
+        "Failed to save sale:",
+        error,
+      );
 
-      alert(error?.response?.data?.message || "Failed to save sale");
+      alert(
+        error?.response?.data?.message ||
+          "Failed to save sale",
+      );
     } finally {
       setSaving(false);
     }
   };
 
   // ==========================================
-  // DELETE SALE
+  // SOFT DELETE SALE
   // ==========================================
 
   const handleDelete = async (id) => {
     try {
-      await api.delete(`/sales/${id}`);
+      await api.delete(
+        `/sales/${id}`,
+      );
 
+      // Reload after soft delete
       await loadSales(search);
 
       setCurrentPage((page) => {
-        const newTotalPages = Math.ceil((sales.length - 1) / itemsPerPage);
+        const remainingItems =
+          Math.max(
+            sales.length - 1,
+            0,
+          );
 
-        return page > newTotalPages && newTotalPages > 0 ? newTotalPages : page;
+        const newTotalPages =
+          Math.ceil(
+            remainingItems /
+              itemsPerPage,
+          );
+
+        if (
+          newTotalPages > 0 &&
+          page > newTotalPages
+        ) {
+          return newTotalPages;
+        }
+
+        return page;
       });
     } catch (error) {
-      console.error("Failed to delete sale:", error);
+      console.error(
+        "Failed to delete sale:",
+        error,
+      );
 
-      alert(error?.response?.data?.message || "Failed to delete sale");
+      alert(
+        error?.response?.data?.message ||
+          "Failed to delete sale",
+      );
     }
   };
 
@@ -280,11 +380,20 @@ function Sales() {
   // PAGINATION
   // ==========================================
 
-  const totalPages = Math.ceil(sales.length / itemsPerPage);
+  const totalPages = Math.ceil(
+    sales.length / itemsPerPage,
+  );
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
+  const startIndex =
+    (currentPage - 1) *
+    itemsPerPage;
 
-  const paginatedSales = sales.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedSales =
+    sales.slice(
+      startIndex,
+      startIndex +
+        itemsPerPage,
+    );
 
   // ==========================================
   // RENDER
@@ -300,7 +409,9 @@ function Sales() {
         errors={errors}
         setErrors={setErrors}
         products={products}
-        productsLoading={productsLoading}
+        productsLoading={
+          productsLoading
+        }
         saving={saving}
         onSave={handleSaveSale}
         customers={customers}
@@ -322,7 +433,6 @@ function Sales() {
         onPageChange={setCurrentPage}
         onItemsPerPageChange={(value) => {
           setItemsPerPage(value);
-
           setCurrentPage(1);
         }}
         onDelete={handleDelete}
@@ -331,7 +441,9 @@ function Sales() {
 
       <SaleDetailsModal
         sale={selectedSale}
-        onClose={() => setSelectedSale(null)}
+        onClose={() =>
+          setSelectedSale(null)
+        }
       />
     </div>
   );

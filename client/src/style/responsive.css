@@ -1,0 +1,233 @@
+/* =========================================================
+   RESPONSIVE - TABLET
+========================================================= */
+
+@media (max-width: 1050px) {
+  .cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE - SALES
+========================================================= */
+
+@media (max-width: 900px) {
+  .sale-item-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sale-item-product {
+    grid-column: 1 / -1;
+  }
+
+  .sale-total {
+    justify-content: space-between;
+  }
+
+  .sale-footer {
+    align-items: flex-end;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE - MOBILE
+========================================================= */
+
+@media (max-width: 700px) {
+  .sidebar {
+    width: 70px;
+
+    padding: 12px 8px;
+  }
+
+  .sidebar .brand span,
+  .sidebar .nav span {
+    display: none;
+  }
+
+  .sidebar .brand {
+    justify-content: center;
+  }
+
+  .sidebar .nav {
+    justify-content: center;
+  }
+
+  .userbox {
+    display: none;
+  }
+
+  .main header {
+    padding: 14px 16px;
+  }
+
+  header h1 {
+    font-size: 18px;
+  }
+
+  .page-content {
+    padding: 16px;
+  }
+
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-head {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+  .panel-head > input {
+    width: 100%;
+  }
+
+  .filters {
+    width: 100%;
+
+    flex-direction: column;
+  }
+
+  .filters input {
+    width: 100%;
+
+    min-width: 0;
+  }
+
+  .toolbar {
+    width: 100%;
+
+    justify-content: flex-start;
+  }
+
+  .sale-item-row {
+    grid-template-columns: 1fr;
+  }
+
+  .sale-item-product {
+    grid-column: auto;
+  }
+
+  .sale-item-row .icon {
+    width: 100%;
+  }
+
+  .sale-items-header {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+  .sale-footer {
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .sale-total {
+    justify-content: space-between;
+  }
+
+  .form-actions {
+    width: 100%;
+  }
+
+  .form-actions .primary {
+    width: 100%;
+  }
+
+  .sale-detail-info {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .modal {
+    padding: 18px;
+  }
+
+  .pagination {
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .pagination-info {
+    text-align: center;
+  }
+
+  .pagination-controls {
+    justify-content: center;
+
+    flex-wrap: wrap;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE - SMALL MOBILE
+========================================================= */
+
+@media (max-width: 480px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .page-content {
+    padding: 12px;
+  }
+
+  header {
+    height: 70px;
+
+    min-height: 70px;
+  }
+
+  header p {
+    display: none;
+  }
+
+  .role {
+    padding: 6px 8px;
+
+    font-size: 10px;
+  }
+
+  .sale-detail-info {
+    grid-template-columns: 1fr;
+  }
+
+  .modal {
+    max-width: 100%;
+
+    padding: 16px;
+  }
+
+  .modal-head {
+    gap: 10px;
+  }
+
+  .delete-modal {
+    max-width: 100%;
+  }
+
+  .delete-modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .delete-cancel-btn,
+  .delete-confirm-btn {
+    width: 100%;
+  }
+}

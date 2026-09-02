@@ -1,5 +1,8 @@
 import React from "react";
-import { Plus, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+} from "lucide-react";
 
 import SearchableSelect from "../../components/SearchableSelect";
 
@@ -11,6 +14,10 @@ function SaleItems({
   products,
   productsLoading,
 }) {
+  // ==========================================
+  // CREATE BLANK ITEM
+  // ==========================================
+
   const createBlankItem = () => ({
     product: "",
     quantity: 1,
@@ -18,24 +25,39 @@ function SaleItems({
     amount: 0,
   });
 
-  const getAvailableProducts = (currentIndex) => {
-    const selectedProducts = form.items
-      .map((item, index) =>
-        index !== currentIndex
-          ? item.product
-          : ""
-      )
-      .filter(Boolean);
+  // ==========================================
+  // AVAILABLE PRODUCTS
+  // ==========================================
+
+  const getAvailableProducts = (
+    currentIndex,
+  ) => {
+    const selectedProducts =
+      form.items
+        .map(
+          (item, index) =>
+            index !== currentIndex
+              ? item.product
+              : "",
+        )
+        .filter(Boolean);
 
     return products.filter(
       (product) =>
-        !selectedProducts.includes(product._id)
+        !selectedProducts.includes(
+          product._id,
+        ),
     );
   };
+
+  // ==========================================
+  // ADD PRODUCT
+  // ==========================================
 
   const addProductItem = () => {
     setForm((prev) => ({
       ...prev,
+
       items: [
         ...prev.items,
         createBlankItem(),
@@ -48,17 +70,29 @@ function SaleItems({
     }));
   };
 
-  const removeProductItem = (index) => {
-    setForm((prev) => {
-      const items = prev.items.filter(
-        (_, i) => i !== index
-      );
+  // ==========================================
+  // REMOVE PRODUCT
+  // ==========================================
 
-      const totalAmount = items.reduce(
-        (total, item) =>
-          total + Number(item.amount || 0),
-        0
-      );
+  const removeProductItem = (
+    index,
+  ) => {
+    setForm((prev) => {
+      const items =
+        prev.items.filter(
+          (_, i) =>
+            i !== index,
+        );
+
+      const totalAmount =
+        items.reduce(
+          (total, item) =>
+            total +
+            Number(
+              item.amount || 0,
+            ),
+          0,
+        );
 
       return {
         ...prev,
@@ -66,42 +100,84 @@ function SaleItems({
         amount: totalAmount,
       };
     });
+
+    setErrors((prev) => {
+      const updated = {
+        ...prev,
+      };
+
+      delete updated[
+        `product_${index}`
+      ];
+
+      delete updated[
+        `quantity_${index}`
+      ];
+
+      delete updated[
+        `rate_${index}`
+      ];
+
+      return updated;
+    });
   };
+
+  // ==========================================
+  // PRODUCT CHANGE
+  // ==========================================
 
   const handleProductChange = (
     index,
-    productId
+    productId,
   ) => {
-    const product = products.find(
-      (item) => item._id === productId
-    );
+    const product =
+      products.find(
+        (item) =>
+          item._id ===
+          productId,
+      );
 
-    if (!product) return;
+    if (!product) {
+      return;
+    }
 
     setForm((prev) => {
-      const items = [...prev.items];
+      const items = [
+        ...prev.items,
+      ];
 
       const quantity = Number(
-        items[index]?.quantity || 1
+        items[index]
+          ?.quantity || 1,
       );
 
       const rate = Number(
-        product.rate || 0
+        product.rate || 0,
       );
 
       items[index] = {
         ...items[index],
-        product: product._id,
+
+        product:
+          product._id,
+
         quantity,
+
         rate,
-        amount: quantity * rate,
+
+        amount:
+          quantity * rate,
       };
 
-      const totalAmount = items.reduce(
-        (total, item) =>
-          total + Number(item.amount || 0),
-        0
-      );
+      const totalAmount =
+        items.reduce(
+          (total, item) =>
+            total +
+            Number(
+              item.amount || 0,
+            ),
+          0,
+        );
 
       return {
         ...prev,
@@ -112,27 +188,43 @@ function SaleItems({
 
     setErrors((prev) => ({
       ...prev,
-      [`product_${index}`]: "",
+      [`product_${index}`]:
+        "",
     }));
   };
 
+  // ==========================================
+  // QUANTITY CHANGE
+  // ==========================================
+
   const handleQuantityChange = (
     index,
-    value
+    value,
   ) => {
     const quantity =
-      value === "" ? "" : Number(value);
+      value === ""
+        ? ""
+        : Number(value);
 
     setForm((prev) => {
-      const items = [...prev.items];
-      const item = items[index];
+      const items = [
+        ...prev.items,
+      ];
 
-      if (!item) return prev;
+      const item =
+        items[index];
+
+      if (!item) {
+        return prev;
+      }
 
       const amount =
         quantity === ""
           ? 0
-          : quantity * Number(item.rate || 0);
+          : quantity *
+            Number(
+              item.rate || 0,
+            );
 
       items[index] = {
         ...item,
@@ -140,11 +232,15 @@ function SaleItems({
         amount,
       };
 
-      const totalAmount = items.reduce(
-        (total, item) =>
-          total + Number(item.amount || 0),
-        0
-      );
+      const totalAmount =
+        items.reduce(
+          (total, item) =>
+            total +
+            Number(
+              item.amount || 0,
+            ),
+          0,
+        );
 
       return {
         ...prev,
@@ -155,12 +251,18 @@ function SaleItems({
 
     setErrors((prev) => ({
       ...prev,
-      [`quantity_${index}`]: "",
+      [`quantity_${index}`]:
+        "",
     }));
   };
 
+  // ==========================================
+  // RENDER
+  // ==========================================
+
   return (
     <div className="sale-items-wrapper">
+      {/* HEADER */}
 
       <div className="sale-items-header">
         <h4>Products</h4>
@@ -168,158 +270,215 @@ function SaleItems({
         <button
           type="button"
           className="secondary"
-          onClick={addProductItem}
+          onClick={
+            addProductItem
+          }
           disabled={
             productsLoading ||
-            form.items.length >= products.length
+            form.items.length >=
+              products.length
           }
         >
           <Plus size={16} />
+
           Add Product
         </button>
       </div>
+
+      {/* LOADING */}
 
       {productsLoading ? (
         <div className="product-loading">
           Loading products...
         </div>
-      ) : form.items.length === 0 ? (
+      ) : form.items.length ===
+        0 ? (
         <div className="empty-state">
-          No products added. Click{" "}
-          <strong>Add Product</strong>.
+          No products added.
+          Click{" "}
+          <strong>
+            Add Product
+          </strong>
+          .
         </div>
       ) : (
         <div className="sale-items">
+          {form.items.map(
+            (
+              item,
+              index,
+            ) => {
+              const availableProducts =
+                getAvailableProducts(
+                  index,
+                );
 
-          {form.items.map((item, index) => {
-            const availableProducts =
-              getAvailableProducts(index);
+              return (
+                <div
+                  className="sale-item-row"
+                  key={index}
+                >
+                  {/* PRODUCT */}
 
-            return (
-              <div
-                className="sale-item-row"
-                key={index}
-              >
+                  <div className="sale-item-product">
+                    <label>
+                      Product
 
-                {/* PRODUCT */}
+                      <SearchableSelect
+                        value={
+                          item.product
+                        }
+                        options={availableProducts.map(
+                          (
+                            product,
+                          ) => ({
+                            value:
+                              product._id,
 
-                <div className="sale-item-product">
-                  <label>
-                    Product
+                            label:
+                              product.name,
 
-                    <SearchableSelect
-                      value={item.product}
-                      options={availableProducts.map(
-                        (product) => ({
-                          value: product._id,
-                          label: product.name,
-                          rate: product.rate,
-                        })
-                      )}
-                      placeholder="Select Product"
-                      error={
-                        !!errors[
-                          `product_${index}`
-                        ]
-                      }
-                      onChange={(value) =>
-                        handleProductChange(
-                          index,
-                          value
-                        )
-                      }
-                      renderOption={(option) => (
-                        <div className="product-option">
-                          <span>
-                            {option.label}
-                          </span>
-
-                          <span className="product-rate">
-                            ₹{option.rate}
-                          </span>
-                        </div>
-                      )}
-                    />
-
-                    {errors[
-                      `product_${index}`
-                    ] && (
-                      <small className="error-text">
-                        {
-                          errors[
+                            rate:
+                              product.rate,
+                          }),
+                        )}
+                        placeholder="Select Product"
+                        error={
+                          !!errors[
                             `product_${index}`
                           ]
                         }
-                      </small>
-                    )}
-                  </label>
-                </div>
+                        onChange={(
+                          value,
+                        ) =>
+                          handleProductChange(
+                            index,
+                            value,
+                          )
+                        }
+                        renderOption={(
+                          option,
+                        ) => (
+                          <div className="product-option">
+                            <span>
+                              {
+                                option.label
+                              }
+                            </span>
 
-                {/* QUANTITY */}
+                            <span className="product-rate">
+                              ₹
+                              {
+                                option.rate
+                              }
+                            </span>
+                          </div>
+                        )}
+                      />
 
-                <div className="sale-item-small">
-                  <label>
-                    Qty
+                      {errors[
+                        `product_${index}`
+                      ] && (
+                        <small className="error-text">
+                          {
+                            errors[
+                              `product_${index}`
+                            ]
+                          }
+                        </small>
+                      )}
+                    </label>
+                  </div>
 
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        handleQuantityChange(
-                          index,
-                          e.target.value
-                        )
-                      }
+                  {/* QUANTITY */}
+
+                  <div className="sale-item-small">
+                    <label>
+                      Qty
+
+                      <input
+                        type="number"
+                        min="1"
+                        value={
+                          item.quantity
+                        }
+                        onChange={(
+                          e,
+                        ) =>
+                          handleQuantityChange(
+                            index,
+                            e.target
+                              .value,
+                          )
+                        }
+                      />
+
+                      {errors[
+                        `quantity_${index}`
+                      ] && (
+                        <small className="error-text">
+                          {
+                            errors[
+                              `quantity_${index}`
+                            ]
+                          }
+                        </small>
+                      )}
+                    </label>
+                  </div>
+
+                  {/* RATE */}
+
+                  <div className="sale-item-small">
+                    <label>
+                      Rate
+
+                      <input
+                        type="number"
+                        value={
+                          item.rate
+                        }
+                        readOnly
+                      />
+                    </label>
+                  </div>
+
+                  {/* AMOUNT */}
+
+                  <div className="sale-item-small">
+                    <label>
+                      Amount
+
+                      <input
+                        type="text"
+                        value={
+                          item.amount
+                        }
+                        readOnly
+                      />
+                    </label>
+                  </div>
+
+                  {/* DELETE */}
+
+                  <button
+                    type="button"
+                    className="icon danger"
+                    title="Remove product"
+                    onClick={() =>
+                      removeProductItem(
+                        index,
+                      )
+                    }
+                  >
+                    <Trash2
+                      size={18}
                     />
-                  </label>
+                  </button>
                 </div>
-
-                {/* RATE */}
-
-                <div className="sale-item-small">
-                  <label>
-                    Rate
-
-                    <input
-                      type="number"
-                      value={item.rate}
-                      readOnly
-                    />
-                  </label>
-                </div>
-
-                {/* AMOUNT */}
-
-                <div className="sale-item-small">
-                  <label>
-                    Amount
-
-                    <input
-                      type="text"
-                      value={item.amount}
-                      readOnly
-                    />
-                  </label>
-                </div>
-
-                {/* DELETE */}
-
-                <button
-                  type="button"
-                  className="icon danger"
-                  title="Remove product"
-                  onClick={() =>
-                    removeProductItem(index)
-                  }
-                >
-                  <Trash2 size={18} />
-                </button>
-
-              </div>
-            );
-          })}
-
+              );
+            },
+          )}
         </div>
       )}
 
@@ -328,7 +487,6 @@ function SaleItems({
           {errors.items}
         </small>
       )}
-
     </div>
   );
 }

@@ -4,7 +4,10 @@ import { Plus } from "lucide-react";
 import SearchableSelect from "../../components/SearchableSelect";
 import SaleItems from "../Sales/SalesItems";
 
-import { paymentMethods, paymentStatus } from "../../data/payment.json";
+import {
+  paymentMethods,
+  paymentStatus,
+} from "../../data/payment.json";
 
 import { money } from "../../utils/helpers";
 
@@ -26,7 +29,10 @@ function SalesForm({
   // HANDLE FIELD CHANGE
   // ==========================================
 
-  const handleChange = (field, value) => {
+  const handleChange = (
+    field,
+    value,
+  ) => {
     setForm((prev) => ({
       ...prev,
       [field]: value,
@@ -41,38 +47,60 @@ function SalesForm({
   };
 
   // ==========================================
-  // HANDLE TYPE CHANGE
+  // TYPE CHANGE
   // ==========================================
 
-  const handleTypeChange = (newType) => {
+  const handleTypeChange = (
+    newType,
+  ) => {
     onTypeChange(newType);
 
     setErrors({});
   };
 
   // ==========================================
-  // PARTY OPTIONS
+  // PARTY LIST
   // ==========================================
 
   const partyList =
-    type === "retail" ? customers : type === "supplier" ? suppliers : [];
-
-  const partyOptions = partyList.map((party) => ({
-    value: party._id || party.id,
-    label:
-      party.name ||
-      party.customerName ||
-      party.supplierName ||
-      party.partyName ||
-      "",
-  }));
+    type === "retail"
+      ? customers
+      : type === "supplier"
+        ? suppliers
+        : [];
 
   // ==========================================
-  // PARTY LABEL
+  // PARTY OPTIONS
+  // ==========================================
+
+  const partyOptions =
+    partyList.map((party) => ({
+      value:
+        party._id ||
+        party.id,
+
+      label:
+        party.name ||
+        party.customerName ||
+        party.supplierName ||
+        party.partyName ||
+        "",
+    }));
+
+  // ==========================================
+  // LABEL
   // ==========================================
 
   const partyLabel =
-    type === "retail" ? "Customer" : type === "supplier" ? "Supplier" : "Name";
+    type === "retail"
+      ? "Customer"
+      : type === "supplier"
+        ? "Supplier"
+        : "Name";
+
+  // ==========================================
+  // PLACEHOLDER
+  // ==========================================
 
   const partyPlaceholder =
     type === "retail"
@@ -82,13 +110,21 @@ function SalesForm({
         : "Enter name";
 
   // ==========================================
-  // SELECT CUSTOMER / SUPPLIER
+  // PARTY CHANGE
   // ==========================================
 
-  const handlePartyChange = (value) => {
-    const selectedParty = partyList.find(
-      (party) => (party._id || party.id) === value,
-    );
+  const handlePartyChange = (
+    value,
+  ) => {
+    const selectedParty =
+      partyList.find(
+        (party) =>
+          String(
+            party._id ||
+              party.id,
+          ) ===
+          String(value),
+      );
 
     const partyName =
       selectedParty?.name ||
@@ -99,13 +135,16 @@ function SalesForm({
 
     setForm((prev) => ({
       ...prev,
-      customerId: value,
-      customerName: partyName,
+
+      partyId: value,
+
+      partyName,
     }));
 
     setErrors((prev) => ({
       ...prev,
-      customerName: "",
+
+      partyName: "",
     }));
   };
 
@@ -116,54 +155,109 @@ function SalesForm({
   const validateForm = () => {
     const newErrors = {};
 
+    // DATE
     if (!form.date) {
-      newErrors.date = "Date is required";
+      newErrors.date =
+        "Date is required";
     }
 
-    if (!form.customerName?.trim()) {
-      newErrors.customerName =
+    // PARTY
+    if (
+      !form.partyName?.trim()
+    ) {
+      newErrors.partyName =
         type === "retail"
           ? "Customer is required"
           : type === "supplier"
             ? "Supplier is required"
             : "Name is required";
-    } else if (form.customerName.trim().length < 2) {
-      newErrors.customerName = "Enter a valid name";
+    } else if (
+      form.partyName.trim()
+        .length < 2
+    ) {
+      newErrors.partyName =
+        "Enter a valid name";
     }
 
-    if (!form.items?.length) {
-      newErrors.items = "Add at least one product";
+    // CUSTOMER / SUPPLIER ID
+    if (
+      type !== "other" &&
+      !form.partyId
+    ) {
+      newErrors.partyName =
+        type === "retail"
+          ? "Please select a customer"
+          : "Please select a supplier";
     }
 
-    form.items.forEach((item, index) => {
-      if (!item.product) {
-        newErrors[`product_${index}`] = "Product is required";
-      }
-
-      if (item.quantity === "" || Number(item.quantity) <= 0) {
-        newErrors[`quantity_${index}`] = "Quantity must be greater than 0";
-      }
-
-      if (item.rate === "" || Number(item.rate) <= 0) {
-        newErrors[`rate_${index}`] = "Rate must be greater than 0";
-      }
-    });
-
-    if (form.amount === "" || Number(form.amount) <= 0) {
-      newErrors.amount = "Amount must be greater than 0";
+    // ITEMS
+    if (
+      !form.items?.length
+    ) {
+      newErrors.items =
+        "Add at least one product";
     }
 
+    // ITEM VALIDATION
+    form.items.forEach(
+      (item, index) => {
+        if (!item.product) {
+          newErrors[
+            `product_${index}`
+          ] =
+            "Product is required";
+        }
+
+        if (
+          item.quantity === "" ||
+          Number(item.quantity) <= 0
+        ) {
+          newErrors[
+            `quantity_${index}`
+          ] =
+            "Quantity must be greater than 0";
+        }
+
+        if (
+          item.rate === "" ||
+          Number(item.rate) <= 0
+        ) {
+          newErrors[
+            `rate_${index}`
+          ] =
+            "Rate must be greater than 0";
+        }
+      },
+    );
+
+    // AMOUNT
+    if (
+      form.amount === "" ||
+      Number(form.amount) <= 0
+    ) {
+      newErrors.amount =
+        "Amount must be greater than 0";
+    }
+
+    // PAYMENT MODE
     if (!form.paymentMode) {
-      newErrors.paymentMode = "Payment method is required";
+      newErrors.paymentMode =
+        "Payment method is required";
     }
 
+    // PAYMENT STATUS
     if (!form.paymentStatus) {
-      newErrors.paymentStatus = "Payment status is required";
+      newErrors.paymentStatus =
+        "Payment status is required";
     }
 
     setErrors(newErrors);
 
-    return Object.keys(newErrors).length === 0;
+    return (
+      Object.keys(
+        newErrors,
+      ).length === 0
+    );
   };
 
   // ==========================================
@@ -186,18 +280,32 @@ function SalesForm({
 
   return (
     <section className="panel">
-      {/* HEADER */}
+      {/* ======================================
+          HEADER
+      ====================================== */}
 
       <div className="panel-head">
         <h3>New Sale</h3>
 
         <div className="tabs">
-          {["retail", "supplier", "other"].map((item) => (
+          {[
+            "retail",
+            "supplier",
+            "other",
+          ].map((item) => (
             <button
               type="button"
               key={item}
-              className={type === item ? "tab active" : "tab"}
-              onClick={() => handleTypeChange(item)}
+              className={
+                type === item
+                  ? "tab active"
+                  : "tab"
+              }
+              onClick={() =>
+                handleTypeChange(
+                  item,
+                )
+              }
             >
               {item}
             </button>
@@ -205,87 +313,185 @@ function SalesForm({
         </div>
       </div>
 
-      {/* FORM */}
+      {/* ======================================
+          FORM
+      ====================================== */}
 
-      <form className="form-grid" onSubmit={submit} noValidate>
-        {/* DATE */}
+      <form
+        className="form-grid"
+        onSubmit={submit}
+        noValidate
+      >
+        {/* ====================================
+            DATE
+        ==================================== */}
 
         <label>
           Date
+
           <input
             type="date"
-            value={form.date || ""}
-            className={errors.date ? "input-error" : ""}
-            onChange={(e) => handleChange("date", e.target.value)}
+            value={
+              form.date || ""
+            }
+            className={
+              errors.date
+                ? "input-error"
+                : ""
+            }
+            onChange={(e) =>
+              handleChange(
+                "date",
+                e.target.value,
+              )
+            }
           />
-          {errors.date && <small className="error-text">{errors.date}</small>}
+
+          {errors.date && (
+            <small className="error-text">
+              {errors.date}
+            </small>
+          )}
         </label>
 
-        {/* CUSTOMER / SUPPLIER / OTHER */}
+        {/* ====================================
+            PARTY
+        ==================================== */}
 
         <div className="form-field">
-          <label>{partyLabel}</label>
+          <label>
+            {partyLabel}
+          </label>
 
           {type === "other" ? (
             <input
               type="text"
-              value={form.customerName || ""}
-              placeholder={partyPlaceholder}
-              className={errors.customerName ? "input-error" : ""}
-              onChange={(e) => handleChange("customerName", e.target.value)}
+              value={
+                form.partyName ||
+                ""
+              }
+              placeholder={
+                partyPlaceholder
+              }
+              className={
+                errors.partyName
+                  ? "input-error"
+                  : ""
+              }
+              onChange={(e) =>
+                handleChange(
+                  "partyName",
+                  e.target.value,
+                )
+              }
             />
           ) : (
             <SearchableSelect
-              value={form.customerId || ""}
-              options={partyOptions}
-              placeholder={partyPlaceholder}
-              error={!!errors.customerName}
-              onChange={handlePartyChange}
+              value={
+                form.partyId ||
+                ""
+              }
+              options={
+                partyOptions
+              }
+              placeholder={
+                partyPlaceholder
+              }
+              error={
+                !!errors.partyName
+              }
+              onChange={
+                handlePartyChange
+              }
             />
           )}
 
-          {errors.customerName && (
-            <small className="error-text">{errors.customerName}</small>
+          {errors.partyName && (
+            <small className="error-text">
+              {
+                errors.partyName
+              }
+            </small>
           )}
         </div>
 
-        {/* PAYMENT MODE */}
+        {/* ====================================
+            PAYMENT MODE
+        ==================================== */}
 
         <div className="form-field">
-          <label>Payment Mode</label>
+          <label>
+            Payment Mode
+          </label>
 
           <SearchableSelect
-            value={form.paymentMode || ""}
-            options={paymentMethods}
+            value={
+              form.paymentMode ||
+              ""
+            }
+            options={
+              paymentMethods
+            }
             placeholder="Select Payment Mode"
-            error={!!errors.paymentMode}
-            onChange={(value) => handleChange("paymentMode", value)}
+            error={
+              !!errors.paymentMode
+            }
+            onChange={(value) =>
+              handleChange(
+                "paymentMode",
+                value,
+              )
+            }
           />
 
           {errors.paymentMode && (
-            <small className="error-text">{errors.paymentMode}</small>
+            <small className="error-text">
+              {
+                errors.paymentMode
+              }
+            </small>
           )}
         </div>
 
-        {/* PAYMENT STATUS */}
+        {/* ====================================
+            PAYMENT STATUS
+        ==================================== */}
 
         <div className="form-field">
           <label>Status</label>
 
           <SearchableSelect
-            value={form.paymentStatus || ""}
-            options={paymentStatus}
+            value={
+              form.paymentStatus ||
+              ""
+            }
+            options={
+              paymentStatus
+            }
             placeholder="Select Status"
-            error={!!errors.paymentStatus}
-            onChange={(value) => handleChange("paymentStatus", value)}
+            error={
+              !!errors.paymentStatus
+            }
+            onChange={(value) =>
+              handleChange(
+                "paymentStatus",
+                value,
+              )
+            }
           />
 
           {errors.paymentStatus && (
-            <small className="error-text">{errors.paymentStatus}</small>
+            <small className="error-text">
+              {
+                errors.paymentStatus
+              }
+            </small>
           )}
         </div>
 
-        {/* PRODUCTS */}
+        {/* ====================================
+            PRODUCTS
+        ==================================== */}
 
         <SaleItems
           form={form}
@@ -293,23 +499,64 @@ function SalesForm({
           errors={errors}
           setErrors={setErrors}
           products={products}
-          productsLoading={productsLoading}
+          productsLoading={
+            productsLoading
+          }
         />
 
-        {/* FOOTER */}
+        {/* ====================================
+            NOTES
+            AFTER PRODUCTS
+        ==================================== */}
+
+        <div className="form-field sale-notes">
+          <label>
+            Notes
+          </label>
+
+          <textarea
+            rows="3"
+            value={
+              form.notes || ""
+            }
+            placeholder="Enter notes..."
+            onChange={(e) =>
+              handleChange(
+                "notes",
+                e.target.value,
+              )
+            }
+          />
+        </div>
+
+        {/* ====================================
+            FOOTER
+        ==================================== */}
 
         <div className="sale-footer">
           <div className="sale-total">
-            <span>Total Amount</span>
+            <span>
+              Total Amount
+            </span>
 
-            <strong>{money(form.amount || 0)}</strong>
+            <strong>
+              {money(
+                form.amount || 0,
+              )}
+            </strong>
           </div>
 
           <div className="form-actions">
-            <button className="primary" type="submit" disabled={saving}>
+            <button
+              className="primary"
+              type="submit"
+              disabled={saving}
+            >
               <Plus size={18} />
 
-              {saving ? "Saving..." : "Save Sale"}
+              {saving
+                ? "Saving..."
+                : "Save Sale"}
             </button>
           </div>
         </div>

@@ -1,0 +1,162 @@
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.primary {
+  min-height: 40px;
+
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 0 15px;
+
+  border: 0;
+
+  border-radius: var(--radius-md);
+
+  background: var(--primary);
+
+  color: var(--text-white);
+
+  font-weight: 700;
+
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease,
+    box-shadow 0.15s ease;
+}
+
+.primary:hover {
+  background: var(--primary-dark);
+
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);
+}
+
+.primary:active {
+  transform: translateY(1px);
+}
+
+.primary:disabled {
+  opacity: 0.65;
+
+  box-shadow: none;
+}
+
+.secondary {
+  min-height: 40px;
+
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 6px;
+
+  padding: 0 16px;
+
+  border: 1px solid var(--border);
+
+  border-radius: var(--radius-md);
+
+  background: var(--surface);
+
+  color: var(--text-secondary);
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.secondary:hover {
+  background: var(--surface-hover);
+
+  border-color: var(--primary);
+
+  color: var(--primary);
+}
+
+/* =========================================================
+   FORM ACTIONS
+========================================================= */
+
+.form-actions {
+  grid-column: 1 / -1;
+
+  display: flex;
+
+  justify-content: flex-end;
+  align-items: center;
+
+  gap: 10px;
+
+  margin-top: 4px;
+}
+
+.form-actions .primary {
+  min-width: 140px;
+}
+
+/* =========================================================
+   ICON BUTTON
+========================================================= */
+
+.icon {
+  width: 32px;
+  height: 32px;
+
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 5px;
+
+  border: 0;
+
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: var(--text-secondary);
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.icon:hover {
+  background: var(--primary-light);
+
+  color: var(--primary);
+}
+
+/* =========================================================
+   AMOUNT LINK
+========================================================= */
+
+.amount-link {
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+
+  color: var(--primary);
+
+  font: inherit;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  text-decoration: underline;
+}
+
+.amount-link:hover {
+  color: var(--primary-dark);
+}
