@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 
 const saleItemSchema = new mongoose.Schema(
   {
+    // ==========================================
+    // SALE
+    // ==========================================
+
     sale: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Sale",
@@ -9,11 +13,19 @@ const saleItemSchema = new mongoose.Schema(
       index: true,
     },
 
+    // ==========================================
+    // PRODUCT
+    // ==========================================
+
     product: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
       required: true,
     },
+
+    // ==========================================
+    // QUANTITY
+    // ==========================================
 
     quantity: {
       type: Number,
@@ -21,11 +33,19 @@ const saleItemSchema = new mongoose.Schema(
       min: 1,
     },
 
+    // ==========================================
+    // RATE
+    // ==========================================
+
     rate: {
       type: Number,
       required: true,
       min: 0,
     },
+
+    // ==========================================
+    // AMOUNT
+    // ==========================================
 
     amount: {
       type: Number,
@@ -37,6 +57,9 @@ const saleItemSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
-// saleItemSchema.index({ sale: 1 });
-saleItemSchema.index({ product: 1 });
+
+saleItemSchema.index({
+  product: 1,
+});
+
 export default mongoose.model("SaleItem", saleItemSchema);

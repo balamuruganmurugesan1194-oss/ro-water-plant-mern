@@ -1,0 +1,33 @@
+/* =========================================================
+   RO WATER PLANT MANAGEMENT
+   GLOBAL STYLE ENTRY
+========================================================= */
+
+/* 1. Theme */
+@import "./variables.css";
+
+/* 2. Reset */
+@import "./reset.css";
+
+/* 3. Layout */
+@import "./layout.css";
+
+/* 4. Application structure */
+@import "./sidebar.css";
+@import "./header.css";
+
+/* 5. UI */
+@import "./forms.css";
+@import "./buttons.css";
+@import "./tables.css";
+@import "./dashboard.css";
+
+/* 6. Components */
+@import "./searchable-select.css";
+@import "./sales.css";
+@import "./modal.css";
+@import "./pagination.css";
+@import "./login.css";
+
+/* 7. Responsive - ALWAYS LAST */
+@import "./responsive.css";

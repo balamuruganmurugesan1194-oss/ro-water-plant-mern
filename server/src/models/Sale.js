@@ -2,56 +2,169 @@ import mongoose from "mongoose";
 
 const saleSchema = new mongoose.Schema(
   {
+    // ==========================================
+    // SALE TYPE
+    // ==========================================
+
     type: {
       type: String,
+
       enum: ["retail", "supplier", "other"],
+
       required: true,
+
+      index: true,
     },
+
+    // ==========================================
+    // DATE
+    // ==========================================
 
     date: {
       type: Date,
+
       required: true,
+
+      index: true,
     },
 
-    customerName: {
+    // ==========================================
+    // PARTY ID
+    //
+    // Customer/Supplier:
+    // actual Party ObjectId
+    //
+    // Other:
+    // null
+    // ==========================================
+
+    partyId: {
+      type: mongoose.Schema.Types.ObjectId,
+
+      ref: "Party",
+
+      default: null,
+
+      index: true,
+    },
+
+    // ==========================================
+    // PARTY NAME
+    //
+    // Customer/Supplier:
+    // copied from Party at sale time
+    //
+    // Other:
+    // entered manually
+    // ==========================================
+
+    partyName: {
       type: String,
+
       required: true,
+
       trim: true,
     },
+
+    // ==========================================
+    // TOTAL AMOUNT
+    // ==========================================
 
     amount: {
       type: Number,
+
       required: true,
+
       min: 0,
     },
 
+    // ==========================================
+    // PAYMENT MODE
+    // ==========================================
+
     paymentMode: {
       type: String,
-      enum: ["cash", "upi", "bank_transfer", "card", "credit"],
-      default: "Cash",
+      required: true,
     },
+
+    // ==========================================
+    // PAYMENT STATUS
+    // ==========================================
 
     paymentStatus: {
       type: String,
-      enum: ["paid","partially_paid", "pending", "partial"],
-      default: "Paid",
+      required: true,
     },
+    // ==========================================
+    // NOTES
+    // ==========================================
 
     notes: {
       type: String,
+
       trim: true,
+
+      default: "",
     },
+
+    // ==========================================
+    // CREATED BY
+    // ==========================================
 
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
+
       ref: "User",
     },
+
+    // ==========================================
+    // SOFT DELETE
+    // ==========================================
+
+    isDeleted: {
+      type: Boolean,
+
+      default: false,
+
+      index: true,
+    },
+
+    // ==========================================
+    // DELETED DATE
+    // ==========================================
+
+    deletedAt: {
+      type: Date,
+
+      default: null,
+    },
+
+    // ==========================================
+    // DELETED BY
+    // ==========================================
+
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+
+      ref: "User",
+
+      default: null,
+    },
   },
+
   {
     timestamps: true,
   },
 );
 
-saleSchema.index({ date: -1, type: 1 });
+// ==========================================
+// INDEX
+// ==========================================
+
+saleSchema.index({
+  date: -1,
+  type: 1,
+  isDeleted: 1,
+});
 
 export default mongoose.model("Sale", saleSchema);

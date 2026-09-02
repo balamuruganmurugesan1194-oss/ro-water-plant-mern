@@ -1,0 +1,190 @@
+/* =========================================================
+   TABLE
+========================================================= */
+
+.table-wrap,
+.table-wrapper {
+  width: 100%;
+
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  font-size: 13px;
+}
+
+.table {
+  width: 100%;
+
+  min-width: 800px;
+
+  border-collapse: collapse;
+
+  table-layout: fixed;
+}
+
+th,
+.table th {
+  padding: 12px 14px;
+
+  background: var(--primary-light);
+
+  color: var(--primary-dark);
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  text-align: left;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.03em;
+}
+
+th,
+td,
+.table th,
+.table td {
+  padding: 12px 14px;
+
+  border-bottom: 1px solid var(--border-light);
+
+  white-space: nowrap;
+}
+
+.table th,
+.table td {
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+.table td {
+  color: var(--text);
+
+  font-size: 14px;
+}
+
+tr:hover td,
+.table tbody tr:hover td {
+  background: var(--surface-hover);
+}
+
+/* =========================================================
+   PRODUCT TABLE COLUMN WIDTHS
+========================================================= */
+
+.table th:nth-child(1),
+.table td:nth-child(1) {
+  width: 22%;
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+  width: 12%;
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+  width: 14%;
+}
+
+.table th:nth-child(4),
+.table td:nth-child(4) {
+  width: 12%;
+}
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
+  width: 12%;
+}
+
+.table th:nth-child(6),
+.table td:nth-child(6) {
+  width: 12%;
+}
+
+.table th:nth-child(7),
+.table td:nth-child(7) {
+  width: 16%;
+}
+
+/* =========================================================
+   TABLE ACTIONS
+========================================================= */
+
+.table-actions {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+}
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.success {
+  color: var(--success);
+
+  font-weight: 600;
+}
+
+.danger {
+  color: var(--danger);
+
+  font-weight: 600;
+}
+
+.warning {
+  color: var(--warning-dark);
+
+  font-weight: 600;
+}
+
+.info {
+  color: var(--info);
+
+  font-weight: 600;
+}
+
+.stock-low {
+  color: var(--danger);
+
+  font-weight: 700;
+}
+
+/* =========================================================
+   EMPTY / LOADING
+========================================================= */
+
+.empty,
+.empty-state {
+  padding: 40px;
+
+  color: var(--text-muted);
+
+  text-align: center;
+}
+
+.loading {
+  padding: 80px;
+
+  color: var(--text-muted);
+
+  text-align: center;
+}
+
+.muted {
+  margin: 4px 0 0;
+
+  color: var(--text-muted);
+
+  font-size: 13px;
+}
