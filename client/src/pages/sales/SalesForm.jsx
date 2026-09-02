@@ -2,7 +2,7 @@ import React from "react";
 import { Plus } from "lucide-react";
 
 import SearchableSelect from "../../components/SearchableSelect";
-import SaleItems from "../Sales/SalesItems";
+import SaleItems from "../sales/SalesItems";
 
 import {
   paymentMethods,
