@@ -1,6 +1,6 @@
 import Party from "../models/Party.js";
 import Counter from "../models/counter.js";
-
+import { getNextNumber } from "../utils/getNextNumber.js";
 // ==========================================
 // GET PARTIES
 // GET /api/parties
@@ -92,33 +92,33 @@ export const createParty = async (req, res) => {
       }
     }
 
-    
     // ==========================================
     // GENERATE PARTY CODE
     // ==========================================
 
     const counterName = `party_${type}`;
 
-    const counter = await Counter.findOneAndUpdate(
-      {
-        name: counterName,
-      },
-      {
-        $inc: {
-          seq: 1,
-        },
-      },
-      {
-        new: true,
-        upsert: true,
-        setDefaultsOnInsert: true,
-      },
-    );
+    // const counter = await Counter.findOneAndUpdate(
+    //   {
+    //     name: counterName,
+    //   },
+    //   {
+    //     $inc: {
+    //       seq: 1,
+    //     },
+    //   },
+    //   {
+    //     new: true,
+    //     upsert: true,
+    //     setDefaultsOnInsert: true,
+    //   },
+    // );
 
     const prefix = type === "customer" ? "CUS" : "SUP";
 
-    const generatedCode = `${prefix}${String(counter.seq).padStart(4, "0")}`;
+    // const generatedCode = `${prefix}${String(counter.seq).padStart(4, "0")}`;
 
+    const generatedCode = await getNextNumber(counterName, prefix, 4);
     console.log("GENERATED PARTY CODE:", generatedCode);
 
     // ==========================================

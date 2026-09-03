@@ -37,6 +37,24 @@ function Expenses() {
   const [form, setForm] = useState(createBlankForm);
 
   // ==========================================
+  // EXPENSE NUMBER
+  // ==========================================
+
+  const [expenseNumber, setExpenseNumber] = useState("");
+
+  const loadNextExpenseNumber = async () => {
+    try {
+      const response = await api.get("/expenses/next-number");
+
+      setExpenseNumber(response.data?.expenseNumber || "");
+    } catch (err) {
+      console.error("Failed to load next expense number:", err);
+
+      setExpenseNumber("");
+    }
+  };
+
+  // ==========================================
   // LOAD EXPENSES
   // ==========================================
 
@@ -51,6 +69,14 @@ function Expenses() {
       setItems([]);
     }
   };
+
+  // ==========================================
+  // INITIAL LOAD
+  // ==========================================
+
+  useEffect(() => {
+    loadNextExpenseNumber();
+  }, []);
 
   // ==========================================
   // LOAD WHEN MONTH CHANGES
@@ -78,6 +104,8 @@ function Expenses() {
       ? new Date(item.date).toLocaleDateString("en-IN").toLowerCase()
       : "";
 
+    const expenseNumber = item.expenseNumber?.toLowerCase() || "";
+
     const category = item.category?.toLowerCase() || "";
 
     const vendor = item.vendor?.toLowerCase() || "";
@@ -90,6 +118,7 @@ function Expenses() {
         : "";
 
     return (
+      expenseNumber.includes(searchValue) ||
       date.includes(searchValue) ||
       category.includes(searchValue) ||
       vendor.includes(searchValue) ||
@@ -121,19 +150,30 @@ function Expenses() {
       setSaving(true);
 
       await api.post("/expenses", {
-        ...form,
+        date: form.date,
+        category: form.category,
         amount: Number(form.amount),
+        vendor: form.vendor,
+        notes: form.notes,
       });
 
+      // Reset form
       setForm(createBlankForm());
 
+      // Clear errors
       setErrors({});
 
+      // Reset search
       setSearch("");
 
+      // Reset pagination
       setCurrentPage(1);
 
+      // Reload expense list
       await load();
+
+      // Get next expense number
+      await loadNextExpenseNumber();
     } catch (err) {
       console.error("Failed to save expense:", err);
 
@@ -219,6 +259,7 @@ function Expenses() {
       {canEdit && (
         <ExpenseForm
           form={form}
+          expenseNumber={expenseNumber}
           errors={errors}
           saving={saving}
           onChange={handleChange}

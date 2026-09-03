@@ -1,6 +1,6 @@
 import Product from "../models/Product.js";
 import Counter from "../models/counter.js";
-
+import { getNextNumber } from "../utils/getNextNumber.js";
 export const getProducts = async (req, res) => {
   try {
     const { active } = req.query;
@@ -128,24 +128,24 @@ export const createProduct = async (req, res) => {
     // ATOMIC COUNTER
     // ==========================================
 
-    const counter = await Counter.findOneAndUpdate(
-      { name: "product" },
-      {
-        $inc: {
-          seq: 1,
-        },
-      },
-      {
-        new: true,
-        upsert: true,
-        setDefaultsOnInsert: true,
-      },
-    );
+    // const counter = await Counter.findOneAndUpdate(
+    //   { name: "product" },
+    //   {
+    //     $inc: {
+    //       seq: 1,
+    //     },
+    //   },
+    //   {
+    //     new: true,
+    //     upsert: true,
+    //     setDefaultsOnInsert: true,
+    //   },
+    // );
 
-    const generatedCode = `PRD${String(counter.seq).padStart(4, "0")}`;
+    // const generatedCode = `PRD${String(counter.seq).padStart(4, "0")}`;
 
-    console.log("GENERATED PRODUCT CODE:", generatedCode);
-
+    // console.log("GENERATED PRODUCT CODE:", generatedCode);
+    const generatedCode = await getNextNumber("product", "PRD", 4);
     // ==========================================
     // CREATE PRODUCT
     // ==========================================

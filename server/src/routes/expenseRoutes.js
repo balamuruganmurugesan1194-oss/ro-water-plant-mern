@@ -4,12 +4,10 @@ import {
   getExpenses,
   createExpense,
   deleteExpense,
+  getNextExpenseNumber
 } from "../controllers/expenseController.js";
 
-import {
-  auth,
-  requireRole,
-} from "../middleware/auth.js";
+import { auth, requireRole } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -18,16 +16,13 @@ const router = express.Router();
 // ==========================================
 
 router.use(auth);
-
+router.get("/next-number", getNextExpenseNumber);
 // ==========================================
 // GET EXPENSES
 // GET /api/expenses
 // ==========================================
 
-router.get(
-  "/",
-  getExpenses
-);
+router.get("/", getExpenses);
 
 // ==========================================
 // CREATE EXPENSE
@@ -35,11 +30,7 @@ router.get(
 // ADMIN ONLY
 // ==========================================
 
-router.post(
-  "/",
-  requireRole("admin"),
-  createExpense
-);
+router.post("/", requireRole("admin"), createExpense);
 
 // ==========================================
 // DELETE EXPENSE
@@ -47,10 +38,6 @@ router.post(
 // ADMIN ONLY
 // ==========================================
 
-router.delete(
-  "/:id",
-  requireRole("admin"),
-  deleteExpense
-);
+router.delete("/:id", requireRole("admin"), deleteExpense);
 
 export default router;

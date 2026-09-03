@@ -18,9 +18,11 @@ function Sales() {
   // ==========================================
 
   const [sales, setSales] = useState([]);
+
   const [products, setProducts] = useState([]);
 
   const [customers, setCustomers] = useState([]);
+
   const [suppliers, setSuppliers] = useState([]);
 
   const [type, setType] = useState("retail");
@@ -30,15 +32,25 @@ function Sales() {
   const [search, setSearch] = useState("");
 
   const [loading, setLoading] = useState(false);
+
   const [productsLoading, setProductsLoading] = useState(false);
+
   const [saving, setSaving] = useState(false);
+
+  // ==========================================
+  // SALE NUMBER
+  // ==========================================
+
+  const [saleNumber, setSaleNumber] = useState("");
 
   const [selectedSale, setSelectedSale] = useState(null);
 
   const [currentPage, setCurrentPage] = useState(1);
+
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const throttleTimeoutRef = useRef(null);
+
   const lastSearchTimeRef = useRef(0);
 
   // ==========================================
@@ -48,12 +60,10 @@ function Sales() {
   const createBlankForm = () => ({
     date: today(),
 
-    // Only used in frontend
-    // Backend receives partyId
+    // Customer / Supplier ID
     partyId: "",
 
-    // Only used in frontend
-    // Backend receives partyName
+    // Customer / Supplier / Other name
     partyName: "",
 
     items: [],
@@ -72,6 +82,24 @@ function Sales() {
   const [errors, setErrors] = useState({});
 
   // ==========================================
+  // LOAD NEXT SALE NUMBER
+  // ==========================================
+
+  const loadNextSaleNumber = async () => {
+    try {
+      const response = await api.get("/sales/next-number");
+
+      const nextNumber = response.data?.saleNumber || "";
+
+      setSaleNumber(nextNumber);
+    } catch (error) {
+      console.error("Failed to load next sale number:", error);
+
+      setSaleNumber("");
+    }
+  };
+
+  // ==========================================
   // LOAD PARTIES
   // ==========================================
 
@@ -86,11 +114,13 @@ function Sales() {
       const supplierList = data.filter((party) => party.type === "supplier");
 
       setCustomers(customerList);
+
       setSuppliers(supplierList);
     } catch (error) {
       console.error("Failed to load parties:", error);
 
       setCustomers([]);
+
       setSuppliers([]);
     }
   };
@@ -145,7 +175,11 @@ function Sales() {
 
   useEffect(() => {
     loadProducts();
+
     loadParties();
+
+    // Load automatic sale number
+    loadNextSaleNumber();
   }, []);
 
   // ==========================================
@@ -194,6 +228,9 @@ function Sales() {
     setCurrentPage(1);
 
     setForm(createBlankForm());
+
+    // Keep the current counter preview.
+    // Sale number is independent of type.
   };
 
   // ==========================================
@@ -203,6 +240,33 @@ function Sales() {
   const handleSaveSale = async (saleForm) => {
     try {
       setSaving(true);
+
+      // ========================================
+      // CALCULATE ITEMS
+      // ========================================
+
+      const items = saleForm.items.map((item) => ({
+        product: item.product,
+
+        quantity: Number(item.quantity),
+
+        rate: Number(item.rate),
+
+        amount: Number(item.quantity) * Number(item.rate),
+      }));
+
+      // ========================================
+      // CALCULATE TOTAL
+      // ========================================
+
+      const totalAmount = saleForm.items.reduce(
+        (total, item) => total + Number(item.quantity) * Number(item.rate),
+        0,
+      );
+
+      // ========================================
+      // PAYLOAD
+      // ========================================
 
       const payload = {
         date: saleForm.date,
@@ -221,20 +285,9 @@ function Sales() {
         // PRODUCTS
         // =====================================
 
-        items: saleForm.items.map((item) => ({
-          product: item.product,
+        items,
 
-          quantity: Number(item.quantity),
-
-          rate: Number(item.rate),
-
-          amount: Number(item.quantity) * Number(item.rate),
-        })),
-
-        amount: saleForm.items.reduce(
-          (total, item) => total + Number(item.quantity) * Number(item.rate),
-          0,
-        ),
+        amount: totalAmount,
 
         // =====================================
         // PAYMENT
@@ -251,7 +304,28 @@ function Sales() {
         notes: saleForm.notes?.trim() || "",
       };
 
-      await api.post("/sales", payload);
+      // ========================================
+      // IMPORTANT
+      // ========================================
+      //
+      // DO NOT SEND saleNumber HERE.
+      //
+      // Backend generates:
+      //
+      // SAL-000001
+      // SAL-000002
+      // SAL-000003
+      //
+      // using Counter.
+      // ========================================
+
+      const response = await api.post("/sales", payload);
+
+      console.log("Sale created:", response.data);
+
+      // ========================================
+      // RESET FORM
+      // ========================================
 
       setForm(createBlankForm());
 
@@ -259,7 +333,17 @@ function Sales() {
 
       setCurrentPage(1);
 
+      // ========================================
+      // RELOAD SALES
+      // ========================================
+
       await loadSales(search);
+
+      // ========================================
+      // GET NEXT SALE NUMBER
+      // ========================================
+
+      await loadNextSaleNumber();
     } catch (error) {
       console.error("Failed to save sale:", error);
 
@@ -314,6 +398,10 @@ function Sales() {
 
   return (
     <div className="content">
+      {/* ======================================
+          SALES FORM
+      ====================================== */}
+
       <SalesForm
         type={type}
         onTypeChange={handleTypeChange}
@@ -327,7 +415,16 @@ function Sales() {
         onSave={handleSaveSale}
         customers={customers}
         suppliers={suppliers}
+        // ====================================
+        // AUTOMATIC SALE NUMBER
+        // ====================================
+
+        saleNumber={saleNumber}
       />
+
+      {/* ======================================
+          SALES REGISTER
+      ====================================== */}
 
       <SalesRegister
         sales={paginatedSales}
@@ -346,11 +443,16 @@ function Sales() {
         onPageChange={setCurrentPage}
         onItemsPerPageChange={(value) => {
           setItemsPerPage(value);
+
           setCurrentPage(1);
         }}
         onDelete={handleDelete}
         onViewSale={setSelectedSale}
       />
+
+      {/* ======================================
+          SALE DETAILS MODAL
+      ====================================== */}
 
       <SaleDetailsModal
         sale={selectedSale}

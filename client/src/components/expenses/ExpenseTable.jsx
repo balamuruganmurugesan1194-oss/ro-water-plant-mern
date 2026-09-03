@@ -10,6 +10,10 @@ import ExportButtons from "../common/ExportButtons";
 
 const expenseExportColumns = [
   {
+    key: "expenseNumber",
+    label: "Expense Number",
+  },
+  {
     key: "date",
     label: "Date",
     type: "date",
@@ -104,9 +108,13 @@ function ExpenseTable({
           {/* TABLE */}
 
           <Table
-            headers={["Date", "Category", "Amount", "Vendor", "Notes", ""]}
+            headers={["Expense Number", "Date", "Category", "Amount", "Vendor", "Notes", ""]}
             rows={paginatedItems.map((item) => (
               <tr key={item._id}>
+                {/* EXPENSE NUMBER */}
+
+                <td>{item.expenseNumber}</td>
+
                 {/* DATE */}
 
                 <td>{new Date(item.date).toLocaleDateString("en-IN")}</td>

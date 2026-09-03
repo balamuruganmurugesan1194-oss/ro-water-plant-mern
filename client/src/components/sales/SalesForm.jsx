@@ -4,10 +4,7 @@ import { Plus } from "lucide-react";
 import SearchableSelect from "../common/SearchableSelect";
 import SaleItems from "../sales/SalesItems";
 
-import {
-  paymentMethods,
-  paymentStatus,
-} from "../../data/payment.json";
+import { paymentMethods, paymentStatus } from "../../data/payment.json";
 
 import { money } from "../../utils/helpers";
 
@@ -24,15 +21,13 @@ function SalesForm({
   onSave,
   customers = [],
   suppliers = [],
+  saleNumber = "",
 }) {
   // ==========================================
   // HANDLE FIELD CHANGE
   // ==========================================
 
-  const handleChange = (
-    field,
-    value,
-  ) => {
+  const handleChange = (field, value) => {
     setForm((prev) => ({
       ...prev,
       [field]: value,
@@ -50,12 +45,17 @@ function SalesForm({
   // TYPE CHANGE
   // ==========================================
 
-  const handleTypeChange = (
-    newType,
-  ) => {
+  const handleTypeChange = (newType) => {
     onTypeChange(newType);
 
     setErrors({});
+
+    // Clear party when changing sale type
+    setForm((prev) => ({
+      ...prev,
+      partyId: "",
+      partyName: "",
+    }));
   };
 
   // ==========================================
@@ -63,43 +63,32 @@ function SalesForm({
   // ==========================================
 
   const partyList =
-    type === "retail"
-      ? customers
-      : type === "supplier"
-        ? suppliers
-        : [];
+    type === "retail" ? customers : type === "supplier" ? suppliers : [];
 
   // ==========================================
   // PARTY OPTIONS
   // ==========================================
 
-  const partyOptions =
-    partyList.map((party) => ({
-      value:
-        party._id ||
-        party.id,
+  const partyOptions = partyList.map((party) => ({
+    value: party._id || party.id,
 
-      label:
-        party.name ||
-        party.customerName ||
-        party.supplierName ||
-        party.partyName ||
-        "",
-    }));
+    label:
+      party.name ||
+      party.customerName ||
+      party.supplierName ||
+      party.partyName ||
+      "",
+  }));
 
   // ==========================================
-  // LABEL
+  // PARTY LABEL
   // ==========================================
 
   const partyLabel =
-    type === "retail"
-      ? "Customer"
-      : type === "supplier"
-        ? "Supplier"
-        : "Name";
+    type === "retail" ? "Customer" : type === "supplier" ? "Supplier" : "Name";
 
   // ==========================================
-  // PLACEHOLDER
+  // PARTY PLACEHOLDER
   // ==========================================
 
   const partyPlaceholder =
@@ -113,18 +102,10 @@ function SalesForm({
   // PARTY CHANGE
   // ==========================================
 
-  const handlePartyChange = (
-    value,
-  ) => {
-    const selectedParty =
-      partyList.find(
-        (party) =>
-          String(
-            party._id ||
-              party.id,
-          ) ===
-          String(value),
-      );
+  const handlePartyChange = (value) => {
+    const selectedParty = partyList.find(
+      (party) => String(party._id || party.id) === String(value),
+    );
 
     const partyName =
       selectedParty?.name ||
@@ -155,109 +136,99 @@ function SalesForm({
   const validateForm = () => {
     const newErrors = {};
 
+    // ----------------------------------------
     // DATE
+    // ----------------------------------------
+
     if (!form.date) {
-      newErrors.date =
-        "Date is required";
+      newErrors.date = "Date is required";
     }
 
+    // ----------------------------------------
     // PARTY
-    if (
-      !form.partyName?.trim()
-    ) {
+    // ----------------------------------------
+
+    if (!form.partyName?.trim()) {
       newErrors.partyName =
         type === "retail"
           ? "Customer is required"
           : type === "supplier"
             ? "Supplier is required"
             : "Name is required";
-    } else if (
-      form.partyName.trim()
-        .length < 2
-    ) {
-      newErrors.partyName =
-        "Enter a valid name";
+    } else if (form.partyName.trim().length < 2) {
+      newErrors.partyName = "Enter a valid name";
     }
 
+    // ----------------------------------------
     // CUSTOMER / SUPPLIER ID
-    if (
-      type !== "other" &&
-      !form.partyId
-    ) {
+    // ----------------------------------------
+
+    if (type !== "other" && !form.partyId) {
       newErrors.partyName =
         type === "retail"
           ? "Please select a customer"
           : "Please select a supplier";
     }
 
+    // ----------------------------------------
     // ITEMS
-    if (
-      !form.items?.length
-    ) {
-      newErrors.items =
-        "Add at least one product";
+    // ----------------------------------------
+
+    if (!form.items?.length) {
+      newErrors.items = "Add at least one product";
     }
 
+    // ----------------------------------------
     // ITEM VALIDATION
-    form.items.forEach(
-      (item, index) => {
+    // ----------------------------------------
+
+    if (form.items?.length) {
+      form.items.forEach((item, index) => {
         if (!item.product) {
-          newErrors[
-            `product_${index}`
-          ] =
-            "Product is required";
+          newErrors[`product_${index}`] = "Product is required";
         }
 
-        if (
-          item.quantity === "" ||
-          Number(item.quantity) <= 0
-        ) {
-          newErrors[
-            `quantity_${index}`
-          ] =
-            "Quantity must be greater than 0";
+        if (item.quantity === "" || Number(item.quantity) <= 0) {
+          newErrors[`quantity_${index}`] = "Quantity must be greater than 0";
         }
 
-        if (
-          item.rate === "" ||
-          Number(item.rate) <= 0
-        ) {
-          newErrors[
-            `rate_${index}`
-          ] =
-            "Rate must be greater than 0";
+        if (item.rate === "" || Number(item.rate) <= 0) {
+          newErrors[`rate_${index}`] = "Rate must be greater than 0";
         }
-      },
-    );
+      });
+    }
 
+    // ----------------------------------------
     // AMOUNT
-    if (
-      form.amount === "" ||
-      Number(form.amount) <= 0
-    ) {
-      newErrors.amount =
-        "Amount must be greater than 0";
+    // ----------------------------------------
+
+    if (form.amount === "" || Number(form.amount) <= 0) {
+      newErrors.amount = "Amount must be greater than 0";
     }
 
+    // ----------------------------------------
     // PAYMENT MODE
+    // ----------------------------------------
+
     if (!form.paymentMode) {
-      newErrors.paymentMode =
-        "Payment method is required";
+      newErrors.paymentMode = "Payment method is required";
     }
 
+    // ----------------------------------------
     // PAYMENT STATUS
+    // ----------------------------------------
+
     if (!form.paymentStatus) {
-      newErrors.paymentStatus =
-        "Payment status is required";
+      newErrors.paymentStatus = "Payment status is required";
     }
+
+    // ----------------------------------------
+    // SET ERRORS
+    // ----------------------------------------
 
     setErrors(newErrors);
 
-    return (
-      Object.keys(
-        newErrors,
-      ).length === 0
-    );
+    return Object.keys(newErrors).length === 0;
   };
 
   // ==========================================
@@ -270,6 +241,9 @@ function SalesForm({
     if (!validateForm()) {
       return;
     }
+
+    // Do not send saleNumber from frontend.
+    // Backend generates it using Counter.
 
     onSave(form);
   };
@@ -288,24 +262,12 @@ function SalesForm({
         <h3>New Sale</h3>
 
         <div className="tabs">
-          {[
-            "retail",
-            "supplier",
-            "other",
-          ].map((item) => (
+          {["retail", "supplier", "other"].map((item) => (
             <button
               type="button"
               key={item}
-              className={
-                type === item
-                  ? "tab active"
-                  : "tab"
-              }
-              onClick={() =>
-                handleTypeChange(
-                  item,
-                )
-              }
+              className={type === item ? "tab active" : "tab"}
+              onClick={() => handleTypeChange(item)}
             >
               {item}
             </button>
@@ -317,41 +279,35 @@ function SalesForm({
           FORM
       ====================================== */}
 
-      <form
-        className="form-grid"
-        onSubmit={submit}
-        noValidate
-      >
+      <form className="form-grid" onSubmit={submit} noValidate>
+        {/* ====================================
+            SALE NUMBER
+        ==================================== */}
+
+        <label>
+          Sale No.
+          <input
+            type="text"
+            value={saleNumber || ""}
+            readOnly
+            placeholder="Generating..."
+            className="readonly-input"
+          />
+        </label>
+
         {/* ====================================
             DATE
         ==================================== */}
 
         <label>
           Date
-
           <input
             type="date"
-            value={
-              form.date || ""
-            }
-            className={
-              errors.date
-                ? "input-error"
-                : ""
-            }
-            onChange={(e) =>
-              handleChange(
-                "date",
-                e.target.value,
-              )
-            }
+            value={form.date || ""}
+            className={errors.date ? "input-error" : ""}
+            onChange={(e) => handleChange("date", e.target.value)}
           />
-
-          {errors.date && (
-            <small className="error-text">
-              {errors.date}
-            </small>
-          )}
+          {errors.date && <small className="error-text">{errors.date}</small>}
         </label>
 
         {/* ====================================
@@ -359,59 +315,28 @@ function SalesForm({
         ==================================== */}
 
         <div className="form-field">
-          <label>
-            {partyLabel}
-          </label>
+          <label>{partyLabel}</label>
 
           {type === "other" ? (
             <input
               type="text"
-              value={
-                form.partyName ||
-                ""
-              }
-              placeholder={
-                partyPlaceholder
-              }
-              className={
-                errors.partyName
-                  ? "input-error"
-                  : ""
-              }
-              onChange={(e) =>
-                handleChange(
-                  "partyName",
-                  e.target.value,
-                )
-              }
+              value={form.partyName || ""}
+              placeholder={partyPlaceholder}
+              className={errors.partyName ? "input-error" : ""}
+              onChange={(e) => handleChange("partyName", e.target.value)}
             />
           ) : (
             <SearchableSelect
-              value={
-                form.partyId ||
-                ""
-              }
-              options={
-                partyOptions
-              }
-              placeholder={
-                partyPlaceholder
-              }
-              error={
-                !!errors.partyName
-              }
-              onChange={
-                handlePartyChange
-              }
+              value={form.partyId || ""}
+              options={partyOptions}
+              placeholder={partyPlaceholder}
+              error={!!errors.partyName}
+              onChange={handlePartyChange}
             />
           )}
 
           {errors.partyName && (
-            <small className="error-text">
-              {
-                errors.partyName
-              }
-            </small>
+            <small className="error-text">{errors.partyName}</small>
           )}
         </div>
 
@@ -420,36 +345,18 @@ function SalesForm({
         ==================================== */}
 
         <div className="form-field">
-          <label>
-            Payment Mode
-          </label>
+          <label>Payment Mode</label>
 
           <SearchableSelect
-            value={
-              form.paymentMode ||
-              ""
-            }
-            options={
-              paymentMethods
-            }
+            value={form.paymentMode || ""}
+            options={paymentMethods}
             placeholder="Select Payment Mode"
-            error={
-              !!errors.paymentMode
-            }
-            onChange={(value) =>
-              handleChange(
-                "paymentMode",
-                value,
-              )
-            }
+            error={!!errors.paymentMode}
+            onChange={(value) => handleChange("paymentMode", value)}
           />
 
           {errors.paymentMode && (
-            <small className="error-text">
-              {
-                errors.paymentMode
-              }
-            </small>
+            <small className="error-text">{errors.paymentMode}</small>
           )}
         </div>
 
@@ -461,31 +368,15 @@ function SalesForm({
           <label>Status</label>
 
           <SearchableSelect
-            value={
-              form.paymentStatus ||
-              ""
-            }
-            options={
-              paymentStatus
-            }
+            value={form.paymentStatus || ""}
+            options={paymentStatus}
             placeholder="Select Status"
-            error={
-              !!errors.paymentStatus
-            }
-            onChange={(value) =>
-              handleChange(
-                "paymentStatus",
-                value,
-              )
-            }
+            error={!!errors.paymentStatus}
+            onChange={(value) => handleChange("paymentStatus", value)}
           />
 
           {errors.paymentStatus && (
-            <small className="error-text">
-              {
-                errors.paymentStatus
-              }
-            </small>
+            <small className="error-text">{errors.paymentStatus}</small>
           )}
         </div>
 
@@ -499,33 +390,29 @@ function SalesForm({
           errors={errors}
           setErrors={setErrors}
           products={products}
-          productsLoading={
-            productsLoading
-          }
+          productsLoading={productsLoading}
         />
 
         {/* ====================================
+            ITEMS ERROR
+        ==================================== */}
+
+        {errors.items && (
+          <small className="error-text sale-items-error">{errors.items}</small>
+        )}
+
+        {/* ====================================
             NOTES
-            AFTER PRODUCTS
         ==================================== */}
 
         <div className="form-field sale-notes">
-          <label>
-            Notes
-          </label>
+          <label>Notes</label>
 
           <textarea
             rows="3"
-            value={
-              form.notes || ""
-            }
+            value={form.notes || ""}
             placeholder="Enter notes..."
-            onChange={(e) =>
-              handleChange(
-                "notes",
-                e.target.value,
-              )
-            }
+            onChange={(e) => handleChange("notes", e.target.value)}
           />
         </div>
 
@@ -535,28 +422,16 @@ function SalesForm({
 
         <div className="sale-footer">
           <div className="sale-total">
-            <span>
-              Total Amount
-            </span>
+            <span>Total Amount</span>
 
-            <strong>
-              {money(
-                form.amount || 0,
-              )}
-            </strong>
+            <strong>{money(form.amount || 0)}</strong>
           </div>
 
           <div className="form-actions">
-            <button
-              className="primary"
-              type="submit"
-              disabled={saving}
-            >
+            <button className="primary" type="submit" disabled={saving}>
               <Plus size={18} />
 
-              {saving
-                ? "Saving..."
-                : "Save Sale"}
+              {saving ? "Saving..." : "Save Sale"}
             </button>
           </div>
         </div>
