@@ -1,4 +1,4 @@
-import Counter from "../models/counter.js";
+import Counter from "../models/Counter.js";
 
 export const getNextNumber = async (counterName, prefix, padding = 6) => {
   const counter = await Counter.findOneAndUpdate(

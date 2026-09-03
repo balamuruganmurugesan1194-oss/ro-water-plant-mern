@@ -1,5 +1,5 @@
 import Product from "../models/Product.js";
-import Counter from "../models/counter.js";
+import Counter from "../models/Counter.js";
 import { getNextNumber } from "../utils/getNextNumber.js";
 export const getProducts = async (req, res) => {
   try {
