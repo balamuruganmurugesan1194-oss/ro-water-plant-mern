@@ -12,9 +12,9 @@ import {
 } from "recharts";
 import api from "../api/client";
 import { money } from "../utils/helpers";
-import Stat from "../components/Stat";
-import Table from "../components/Table";
-import Loading from "../components/Loading";
+import Stat from "../components/common/Stat";
+import Table from "../components/common/Table";
+import Loading from "../components/common/Loading";
 
 function Dashboard() {
   const [data, setData] = useState(null);

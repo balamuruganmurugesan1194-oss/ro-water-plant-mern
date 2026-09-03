@@ -1,6 +1,6 @@
 import React from "react";
 import { X } from "lucide-react";
-import { money } from "../utils/helpers";
+import { money } from "../../utils/helpers";
 
 function SaleDetailsModal({ sale, onClose }) {
   if (!sale) {

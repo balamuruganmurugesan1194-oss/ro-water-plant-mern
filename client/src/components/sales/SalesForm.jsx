@@ -1,7 +1,7 @@
 import React from "react";
 import { Plus } from "lucide-react";
 
-import SearchableSelect from "../../components/SearchableSelect";
+import SearchableSelect from "../common/SearchableSelect";
 import SaleItems from "../sales/SalesItems";
 
 import {

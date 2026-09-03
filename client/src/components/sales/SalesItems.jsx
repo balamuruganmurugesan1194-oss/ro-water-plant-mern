@@ -4,7 +4,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-import SearchableSelect from "../../components/SearchableSelect";
+import SearchableSelect from "../common/SearchableSelect";
 
 function SaleItems({
   form,
