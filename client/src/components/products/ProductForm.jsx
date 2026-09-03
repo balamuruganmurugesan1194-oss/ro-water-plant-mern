@@ -293,7 +293,7 @@ function ProductForm({
             className="readonly-input"
             placeholder="Auto generated"
           />
-          <small className="field-hint">Automatically generated</small>
+          {/* <small className="field-hint">Automatically generated</small> */}
         </label>
 
         {/* ======================================

@@ -55,6 +55,10 @@ function ProductTable({
 
   const productExportColumns = [
     {
+      key: "code",
+      label: "Product Code",
+    },
+    {
       key: "name",
       label: "Product Name",
     },
@@ -131,8 +135,8 @@ function ProductTable({
             <table className="table">
               <thead>
                 <tr>
-                  <th>Product</th>
                   <th>Code</th>
+                  <th>Product</th>
                   <th>Category</th>
                   <th>Unit</th>
                   <th>Rate</th>
@@ -144,16 +148,13 @@ function ProductTable({
               <tbody>
                 {filteredProducts.map((product) => (
                   <tr key={product._id}>
-                    {/* PRODUCT */}
-
-                    <td>
-                      <strong>{product.name}</strong>
-                    </td>
-
                     {/* CODE */}
 
                     <td>{product.code}</td>
 
+                    {/* PRODUCT */}
+
+                    <td>{product.name}</td>
                     {/* CATEGORY */}
 
                     <td>{product.category}</td>

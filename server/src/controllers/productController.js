@@ -1,5 +1,5 @@
 import Product from "../models/Product.js";
-import Counter from "../models/Counter.js";
+import Counter from "../models/counter.js";
 
 export const getProducts = async (req, res) => {
   try {
@@ -11,7 +11,7 @@ export const getProducts = async (req, res) => {
       filter.active = active === "true";
     }
 
-    const products = await Product.find(filter).sort({ name: 1 });
+    const products = await Product.find(filter).sort({ code: 1 });
 
     res.json(products);
   } catch (error) {

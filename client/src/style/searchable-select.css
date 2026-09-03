@@ -54,6 +54,7 @@
   position: relative;
 
   width: 100%;
+  top: 5px;
 }
 
 .searchable-select-button {
