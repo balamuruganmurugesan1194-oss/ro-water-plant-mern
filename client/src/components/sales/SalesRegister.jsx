@@ -1,11 +1,11 @@
 import React from "react";
 
-import Table from "../../components/Table";
-import Loading from "../../components/Loading";
-import Pagination from "../../components/Pagination";
-import DeleteButton from "../../components/DeleteButton";
+import Table from "../common/Table";
+import Loading from "../common/Loading";
+import Pagination from "../common/Pagination";
+import DeleteButton from "../common/DeleteButton";
 import { money } from "../../utils/helpers";
-import ExportButtons from "../../components/ExportButtons";
+import ExportButtons from "../common/ExportButtons";
 
 function SalesRegister({
   sales,

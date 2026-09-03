@@ -5,8 +5,8 @@ import {
   TableView,
 } from "@mui/icons-material";
 
-import { exportToExcel } from "../utils/exportExcel";
-import { exportToPDF } from "../utils/exportPdf";
+import { exportToExcel } from "../../utils/exportExcel";
+import { exportToPDF } from "../../utils/exportPdf";
 
 function ExportButtons({
   data = [],

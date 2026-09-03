@@ -1,39 +1,49 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Search } from "lucide-react";
 
 import api from "../api/client";
-import Table from "../components/Table";
-import DeleteButton from "../components/DeleteButton";
-import Pagination from "../components/Pagination";
-import ExportButtons from "../components/ExportButtons";
+
+import PartyForm from "../components/parties/PartyForm";
+import PartyTable from "../components/parties/PartyTable";
+
+// ==========================================
+// INITIAL FORM
+// ==========================================
+
+const initialForm = {
+  code: "",
+  name: "",
+  contactNumber: "",
+  address: "",
+};
+
+// ==========================================
+// PARTIES
+// ==========================================
 
 function Parties() {
+  // ==========================================
+  // STATE
+  // ==========================================
+
   const [type, setType] = useState("customer");
+
   const [items, setItems] = useState([]);
 
   const [saving, setSaving] = useState(false);
+
   const [errors, setErrors] = useState({});
+
   const [search, setSearch] = useState("");
+
+  const [form, setForm] = useState(initialForm);
 
   // ==========================================
   // PAGINATION
   // ==========================================
 
   const [currentPage, setCurrentPage] = useState(1);
+
   const [itemsPerPage, setItemsPerPage] = useState(10);
-
-  // ==========================================
-  // INITIAL FORM
-  // ==========================================
-
-  const initialForm = {
-    code: "",
-    name: "",
-    contactNumber: "",
-    address: "",
-  };
-
-  const [form, setForm] = useState(initialForm);
 
   // ==========================================
   // LOAD PARTIES
@@ -57,6 +67,7 @@ function Parties() {
 
   useEffect(() => {
     setCurrentPage(1);
+
     setSearch("");
 
     load();
@@ -82,7 +93,7 @@ function Parties() {
   });
 
   // ==========================================
-  // PAGINATION CALCULATION
+  // PAGINATION
   // ==========================================
 
   const totalItems = filteredItems.length;
@@ -96,127 +107,45 @@ function Parties() {
   const paginatedItems = filteredItems.slice(startIndex, endIndex);
 
   // ==========================================
-  // HANDLE CHANGE
+  // RESET FORM
   // ==========================================
 
-  const handleChange = (field, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+  const resetForm = () => {
+    setForm(initialForm);
 
-    if (errors[field]) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: "",
-      }));
-    }
-  };
-
-  // ==========================================
-  // VALIDATION
-  // ==========================================
-
-  const validate = () => {
-    const newErrors = {};
-
-    // ------------------------------------------
-    // CODE
-    // ------------------------------------------
-
-    const code = form.code.trim();
-
-    if (!code) {
-      newErrors.code = "Code is required";
-    } else if (code.length < 2) {
-      newErrors.code = "Code must be at least 2 characters";
-    } else if (code.length > 20) {
-      newErrors.code = "Code cannot exceed 20 characters";
-    } else if (!/^[A-Za-z0-9_-]+$/.test(code)) {
-      newErrors.code = "Code can contain only letters, numbers, _ and -";
-    }
-
-    // ------------------------------------------
-    // NAME
-    // ------------------------------------------
-
-    const name = form.name.trim();
-
-    if (!name) {
-      newErrors.name = "Name is required";
-    } else if (name.length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
-    } else if (name.length > 50) {
-      newErrors.name = "Name cannot exceed 50 characters";
-    } else if (!/^[A-Za-z\s.'-]+$/.test(name)) {
-      newErrors.name = "Name can contain only letters, spaces, . ' and -";
-    }
-
-    // ------------------------------------------
-    // CONTACT NUMBER
-    // ------------------------------------------
-
-    const contact = form.contactNumber.trim();
-
-    if (!contact) {
-      newErrors.contactNumber = "Contact number is required";
-    } else if (!/^[6-9]\d{9}$/.test(contact)) {
-      newErrors.contactNumber = "Enter a valid 10-digit mobile number";
-    }
-
-    // ------------------------------------------
-    // AREA
-    // ------------------------------------------
-
-    const address = form.address.trim();
-
-    if (!address) {
-      newErrors.address = "Area is required";
-    } else if (address.length < 2) {
-      newErrors.address = "Area must be at least 2 characters";
-    } else if (address.length > 100) {
-      newErrors.address = "Area cannot exceed 100 characters";
-    }
-
-    setErrors(newErrors);
-
-    return Object.keys(newErrors).length === 0;
+    setErrors({});
   };
 
   // ==========================================
   // SUBMIT
   // ==========================================
 
-  const submit = async (e) => {
-    e.preventDefault();
-
-    if (!validate()) {
-      return;
-    }
-
+  const submit = async () => {
     try {
       setSaving(true);
 
       await api.post("/parties", {
         code: form.code.trim(),
+
         name: form.name.trim(),
+
         contactNumber: form.contactNumber.trim(),
+
         address: form.address.trim(),
+
         type,
       });
 
       // Reset form
-      setForm(initialForm);
-
-      setErrors({});
+      resetForm();
 
       // Reset search
       setSearch("");
 
-      // Go to first page
+      // First page
       setCurrentPage(1);
 
-      // Reload list
+      // Reload
       await load();
     } catch (err) {
       console.error("Failed to save party:", err);
@@ -282,7 +211,7 @@ function Parties() {
   };
 
   // ==========================================
-  // ITEMS PER PAGE CHANGE
+  // ITEMS PER PAGE
   // ==========================================
 
   const handleItemsPerPageChange = (value) => {
@@ -292,263 +221,48 @@ function Parties() {
   };
 
   // ==========================================
-  // EXPORT COLUMNS
-  // ==========================================
-
-  const partyExportColumns = [
-    {
-      key: "code",
-      label: "Code",
-    },
-
-    {
-      key: "name",
-      label: "Party Name",
-    },
-
-    {
-      key: "type",
-      label: "Type",
-      value: (row) =>
-        row.type ? row.type.charAt(0).toUpperCase() + row.type.slice(1) : "",
-    },
-
-    {
-      key: "contactNumber",
-      label: "Contact No",
-    },
-
-    {
-      key: "address",
-      label: "Area",
-    },
-  ];
-
-  // ==========================================
   // RENDER
   // ==========================================
 
   return (
     <div className="content">
-      {/* ==========================================
-          ADD CUSTOMER / SUPPLIER
-      ========================================== */}
+      {/* ========================================
+          PARTY FORM
+      ======================================== */}
 
-      <section className="panel">
-        <div className="panel-head">
-          <h3>Directory</h3>
+      <PartyForm
+        type={type}
+        form={form}
+        setForm={setForm}
+        errors={errors}
+        setErrors={setErrors}
+        saving={saving}
+        onSubmit={submit}
+        onTypeChange={handleTypeChange}
+      />
 
-          <div className="tabs">
-            {["customer", "supplier"].map((x) => (
-              <button
-                key={x}
-                type="button"
-                className={type === x ? "tab active" : "tab"}
-                onClick={() => handleTypeChange(x)}
-              >
-                {x}
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* ========================================
+          PARTY TABLE
+      ======================================== */}
 
-        <form className="form-grid" onSubmit={submit} noValidate>
-          {/* ========================================
-              CODE
-          ======================================== */}
-
-          <label>
-            Code
-            <input
-              required
-              value={form.code}
-              maxLength={20}
-              placeholder="Enter code"
-              className={errors.code ? "input-error" : ""}
-              onChange={(e) =>
-                handleChange("code", e.target.value.toUpperCase())
-              }
-            />
-            {errors.code && <small className="error-text">{errors.code}</small>}
-          </label>
-
-          {/* ========================================
-              NAME
-          ======================================== */}
-
-          <label>
-            Name
-            <input
-              required
-              value={form.name}
-              maxLength={50}
-              placeholder="Enter name"
-              className={errors.name ? "input-error" : ""}
-              onChange={(e) => handleChange("name", e.target.value)}
-            />
-            {errors.name && <small className="error-text">{errors.name}</small>}
-          </label>
-
-          {/* ========================================
-              CONTACT NUMBER
-          ======================================== */}
-
-          <label>
-            Contact No
-            <input
-              required
-              type="tel"
-              value={form.contactNumber}
-              maxLength={10}
-              inputMode="numeric"
-              placeholder="10-digit mobile number"
-              className={errors.contactNumber ? "input-error" : ""}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, "").slice(0, 10);
-
-                handleChange("contactNumber", value);
-              }}
-            />
-            {errors.contactNumber && (
-              <small className="error-text">{errors.contactNumber}</small>
-            )}
-          </label>
-
-          {/* ========================================
-              AREA
-          ======================================== */}
-
-          <label>
-            Area
-            <input
-              required
-              value={form.address}
-              maxLength={100}
-              placeholder="Enter area"
-              className={errors.address ? "input-error" : ""}
-              onChange={(e) => handleChange("address", e.target.value)}
-            />
-            {errors.address && (
-              <small className="error-text">{errors.address}</small>
-            )}
-          </label>
-
-          {/* ========================================
-              SUBMIT BUTTON
-          ======================================== */}
-
-          <button className="primary" type="submit" disabled={saving}>
-            <Plus size={18} />
-
-            {saving ? "Saving..." : `Add ${type}`}
-          </button>
-        </form>
-      </section>
-
-      {/* ==========================================
-          PARTY LIST
-      ========================================== */}
-
-      <section className="panel">
-        <div className="panel-head">
-          <h3>{type === "customer" ? "Customers" : "Suppliers"}</h3>
-
-          {/* ======================================
-              FILTERS
-          ====================================== */}
-
-          <div className="filters">
-            {/* SEARCH */}
-
-            <div className="search-box">
-              <Search size={17} />
-
-              <input
-                type="search"
-                placeholder={`Search ${
-                  type === "customer" ? "customer" : "supplier"
-                }...`}
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-
-                  setCurrentPage(1);
-                }}
-              />
-            </div>
-            {/* EXPORT BUTTONS */}
-
-            <ExportButtons
-              data={items}
-              columns={partyExportColumns}
-              title={
-                type === "customer" ? "Customer Register" : "Supplier Register"
-              }
-              fileName={
-                type === "customer" ? "Customer_Register" : "Supplier_Register"
-              }
-              sheetName={type === "customer" ? "Customers" : "Suppliers"}
-            />
-          </div>
-        </div>
-
-        {/* ========================================
-            EMPTY STATE
-        ======================================== */}
-
-        {items.length === 0 ? (
-          <div className="empty-state">
-            No {type === "customer" ? "customers" : "suppliers"} found.
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="empty-state">
-            No matching {type === "customer" ? "customers" : "suppliers"} found.
-          </div>
-        ) : (
-          <>
-            {/* ==================================
-                TABLE
-            ================================== */}
-
-            <Table
-              headers={["Code", "Name", "Contact No", "Area", "Actions"]}
-              rows={paginatedItems.map((x) => (
-                <tr key={x._id}>
-                  <td>{x.code}</td>
-
-                  <td>{x.name}</td>
-
-                  <td>{x.contactNumber}</td>
-
-                  <td>{x.address}</td>
-
-                  <td>
-                    <div className="table-actions">
-                      <DeleteButton
-                        onDelete={() => handleDelete(x._id)}
-                        itemName={x.name}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            />
-
-            {/* ==================================
-                PAGINATION
-            ================================== */}
-
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              itemsPerPage={itemsPerPage}
-              onPageChange={handlePageChange}
-              onItemsPerPageChange={handleItemsPerPageChange}
-            />
-          </>
-        )}
-      </section>
+      <PartyTable
+        type={type}
+        items={items}
+        filteredItems={filteredItems}
+        paginatedItems={paginatedItems}
+        search={search}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setCurrentPage(1);
+        }}
+        onDelete={handleDelete}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        onPageChange={handlePageChange}
+        onItemsPerPageChange={handleItemsPerPageChange}
+      />
     </div>
   );
 }
