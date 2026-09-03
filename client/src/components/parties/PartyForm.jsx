@@ -233,12 +233,13 @@ function PartyForm({
         {/* ==================================
             SUBMIT
         ================================== */}
+        <div className="form-submit">
+          <button className="primary" type="submit" disabled={saving}>
+            <Plus size={18} />
 
-        <button className="primary" type="submit" disabled={saving}>
-          <Plus size={18} />
-
-          {saving ? "Saving..." : `Add ${type}`}
-        </button>
+            {saving ? "Saving..." : `Add ${type}`}
+          </button>
+        </div>
       </form>
     </section>
   );

@@ -6,10 +6,13 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-  toggleProductStatus
+  toggleProductStatus,
+  getNextProductCode,
 } from "../controllers/productController.js";
 
 const router = express.Router();
+
+router.get("/next-code", getNextProductCode);
 
 router.get("/", getProducts);
 
@@ -22,4 +25,6 @@ router.put("/:id", updateProduct);
 router.delete("/:id", deleteProduct);
 
 router.patch("/:id/status", toggleProductStatus);
+
+
 export default router;

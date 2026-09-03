@@ -97,6 +97,7 @@
 
 .selected-value {
   color: var(--text);
+  font-weight: 400;
 }
 
 .placeholder-value {
