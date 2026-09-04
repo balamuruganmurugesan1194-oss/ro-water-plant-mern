@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 
 import api from "../api/client";
 
+import { useAuth } from "../context/AuthContext";
+
 import PartyForm from "../components/parties/PartyForm";
 import PartyTable from "../components/parties/PartyTable";
 
@@ -22,6 +24,20 @@ const initialForm = {
 
 function Parties() {
   // ==========================================
+  // AUTH
+  // ==========================================
+
+  const { user } = useAuth();
+
+  const role = user?.role?.toLowerCase();
+
+  const canAdd = role === "admin" || role === "manager";
+
+  const canEdit = role === "admin" || role === "manager";
+
+  const canDelete = role === "admin";
+
+  // ==========================================
   // STATE
   // ==========================================
 
@@ -36,6 +52,14 @@ function Parties() {
   const [search, setSearch] = useState("");
 
   const [form, setForm] = useState(initialForm);
+
+  // ==========================================
+  // EDITING
+  // ==========================================
+
+  const [editing, setEditing] = useState(false);
+
+  const [editingId, setEditingId] = useState(null);
 
   // ==========================================
   // PAGINATION
@@ -67,8 +91,12 @@ function Parties() {
 
   useEffect(() => {
     setCurrentPage(1);
-
     setSearch("");
+
+    setEditing(false);
+    setEditingId(null);
+    setForm(initialForm);
+    setErrors({});
 
     load();
   }, [type]);
@@ -112,17 +140,85 @@ function Parties() {
 
   const resetForm = () => {
     setForm(initialForm);
+    setErrors({});
+    setEditing(false);
+    setEditingId(null);
+  };
+
+  // ==========================================
+  // EDIT PARTY
+  // ==========================================
+
+  const handleEdit = (party) => {
+    if (!canEdit) {
+      alert("You are not authorized to edit parties.");
+
+      return;
+    }
+
+    setEditing(true);
+    setEditingId(party._id);
+
+    setForm({
+      code: party.code || "",
+      name: party.name || "",
+      contactNumber: party.contactNumber || "",
+      address: party.address || "",
+    });
 
     setErrors({});
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
   // ==========================================
   // SUBMIT
+  // ADD / UPDATE
   // ==========================================
 
   const submit = async () => {
     try {
       setSaving(true);
+
+      // ========================================
+      // UPDATE
+      // ========================================
+
+      if (editing) {
+        if (!canEdit) {
+          throw new Error("You are not authorized to edit parties.");
+        }
+
+        await api.put(`/parties/${editingId}`, {
+          name: form.name.trim(),
+
+          contactNumber: form.contactNumber.trim(),
+
+          address: form.address.trim(),
+        });
+
+        alert("Party updated successfully");
+
+        resetForm();
+
+        setSearch("");
+        setCurrentPage(1);
+
+        await load();
+
+        return;
+      }
+
+      // ========================================
+      // CREATE
+      // ========================================
+
+      if (!canAdd) {
+        throw new Error("You are not authorized to add parties.");
+      }
 
       await api.post("/parties", {
         code: form.code.trim(),
@@ -137,20 +233,21 @@ function Parties() {
       });
 
       // Reset form
+
       resetForm();
 
-      // Reset search
       setSearch("");
-
-      // First page
       setCurrentPage(1);
 
       // Reload
+
       await load();
     } catch (err) {
       console.error("Failed to save party:", err);
 
-      alert(err?.response?.data?.message || "Failed to save party");
+      alert(
+        err?.response?.data?.message || err.message || "Failed to save party",
+      );
     } finally {
       setSaving(false);
     }
@@ -161,12 +258,17 @@ function Parties() {
   // ==========================================
 
   const handleDelete = async (id) => {
+    if (!canDelete) {
+      alert("You are not authorized to delete parties.");
+
+      return;
+    }
+
     try {
       await api.delete(`/parties/${id}`);
 
       await load();
 
-      // Calculate page after deletion
       const remainingItems = items.length - 1;
 
       const newTotalPages = Math.ceil(remainingItems / itemsPerPage);
@@ -186,14 +288,14 @@ function Parties() {
   // ==========================================
 
   const handleTypeChange = (newType) => {
+    if (editing) {
+      resetForm();
+    }
+
     setType(newType);
-
     setSearch("");
-
     setErrors({});
-
     setForm(initialForm);
-
     setCurrentPage(1);
   };
 
@@ -216,7 +318,6 @@ function Parties() {
 
   const handleItemsPerPageChange = (value) => {
     setItemsPerPage(value);
-
     setCurrentPage(1);
   };
 
@@ -230,16 +331,20 @@ function Parties() {
           PARTY FORM
       ======================================== */}
 
-      <PartyForm
-        type={type}
-        form={form}
-        setForm={setForm}
-        errors={errors}
-        setErrors={setErrors}
-        saving={saving}
-        onSubmit={submit}
-        onTypeChange={handleTypeChange}
-      />
+      {canAdd || editing ? (
+        <PartyForm
+          type={type}
+          form={form}
+          setForm={setForm}
+          errors={errors}
+          setErrors={setErrors}
+          saving={saving}
+          onSubmit={submit}
+          onTypeChange={handleTypeChange}
+          editing={editing}
+          onCancelEdit={resetForm}
+        />
+      ) : null}
 
       {/* ========================================
           PARTY TABLE
@@ -255,7 +360,10 @@ function Parties() {
           setSearch(value);
           setCurrentPage(1);
         }}
+        onEdit={handleEdit}
         onDelete={handleDelete}
+        canEdit={canEdit}
+        canDelete={canDelete}
         currentPage={currentPage}
         totalPages={totalPages}
         totalItems={totalItems}

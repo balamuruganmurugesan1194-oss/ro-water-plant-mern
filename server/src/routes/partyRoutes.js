@@ -4,6 +4,7 @@ import {
   getParties,
   createParty,
   deleteParty,
+  updateParty,
   getNextPartyCode,
 } from "../controllers/partyController.js";
 
@@ -30,7 +31,12 @@ router.get("/", getParties);
 // ==========================================
 
 router.post("/", createParty);
+// ==========================================
+// UPDATE
+// ADMIN + MANAGER
+// ==========================================
 
+router.put("/:id", updateParty);
 // ==========================================
 // DELETE PARTY
 // DELETE /api/parties/:id

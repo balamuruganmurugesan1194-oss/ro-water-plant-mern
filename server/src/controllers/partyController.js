@@ -1,5 +1,5 @@
 import Party from "../models/Party.js";
-import Counter from "../models/counter.js";
+import Counter from "../models/Counter.js";
 import { getNextNumber } from "../utils/getNextNumber.js";
 // ==========================================
 // GET PARTIES
@@ -10,7 +10,7 @@ export const getParties = async (req, res) => {
   try {
     const filter = req.query.type ? { type: req.query.type } : {};
 
-    const parties = await Party.find(filter).sort({ code: 1 }).limit(500);
+    const parties = await Party.find(filter).sort({ createdAt: -1 }).limit(500);
 
     res.status(200).json(parties);
   } catch (error) {
@@ -239,6 +239,47 @@ export const getNextPartyCode = async (req, res) => {
 
     return res.status(500).json({
       message: "Failed to fetch next party code",
+    });
+  }
+};
+// ==========================================
+// UPDATE PARTY
+// PUT /api/parties/:id
+// ==========================================
+
+export const updateParty = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { name, contactNumber, address } = req.body;
+
+    if (!name || !contactNumber) {
+      return res.status(400).json({
+        message: "Name and contact number are required",
+      });
+    }
+
+    const party = await Party.findById(id);
+
+    if (!party) {
+      return res.status(404).json({
+        message: "Party not found",
+      });
+    }
+
+    // Don't allow code/type modification
+    party.name = name.trim();
+    party.contactNumber = contactNumber.trim();
+    party.address = address?.trim() || "";
+
+    await party.save();
+
+    res.json(party);
+  } catch (error) {
+    console.error("UPDATE PARTY ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to update party",
     });
   }
 };

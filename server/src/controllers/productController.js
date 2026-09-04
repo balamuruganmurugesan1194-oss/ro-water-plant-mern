@@ -11,7 +11,7 @@ export const getProducts = async (req, res) => {
       filter.active = active === "true";
     }
 
-    const products = await Product.find(filter).sort({ code: 1 });
+    const products = await Product.find(filter).sort({ createdAt: -1 });
 
     res.json(products);
   } catch (error) {

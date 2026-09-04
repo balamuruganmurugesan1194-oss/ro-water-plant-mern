@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, X } from "lucide-react";
 import api from "../../api/client";
 
 // ==========================================
@@ -15,6 +15,8 @@ function PartyForm({
   saving,
   onSubmit,
   onTypeChange,
+  editing,
+  onCancelEdit,
 }) {
   const [loadingCode, setLoadingCode] = useState(false);
 
@@ -47,14 +49,13 @@ function PartyForm({
 
   // ==========================================
   // LOAD CODE
-  // WHEN TYPE CHANGES
   // ==========================================
 
   useEffect(() => {
-    if (type) {
+    if (type && !editing) {
       getNextPartyCode(type);
     }
-  }, [type]);
+  }, [type, editing]);
 
   // ==========================================
   // HANDLE CHANGE
@@ -81,10 +82,6 @@ function PartyForm({
   const validate = () => {
     const newErrors = {};
 
-    // ========================================
-    // NAME
-    // ========================================
-
     const name = form.name.trim();
 
     if (!name) {
@@ -93,10 +90,6 @@ function PartyForm({
       newErrors.name = "Name can contain only letters, spaces, . ' and -";
     }
 
-    // ========================================
-    // CONTACT NUMBER
-    // ========================================
-
     const contact = form.contactNumber.trim();
 
     if (!contact) {
@@ -104,11 +97,6 @@ function PartyForm({
     } else if (!/^[6-9]\d{9}$/.test(contact)) {
       newErrors.contactNumber = "Enter a valid 10-digit mobile number";
     }
-
-    // ========================================
-    // AREA
-    // OPTIONAL
-    // ========================================
 
     if (form.address?.trim()) {
       if (form.address.trim().length > 100) {
@@ -132,12 +120,7 @@ function PartyForm({
       return;
     }
 
-    try {
-      await onSubmit();
-      await getNextPartyCode(type);
-    } catch (error) {
-      console.error("PARTY SUBMIT ERROR:", error);
-    }
+    await onSubmit();
   };
 
   // ==========================================
@@ -146,35 +129,35 @@ function PartyForm({
 
   return (
     <section className="panel">
-      {/* ======================================
-          HEADER
-      ====================================== */}
+      {/* HEADER */}
 
       <div className="panel-head">
-        <h3>Directory</h3>
+        <h3>
+          {editing
+            ? `Edit ${type === "customer" ? "Customer" : "Supplier"}`
+            : "Directory"}
+        </h3>
 
-        <div className="tabs">
-          {["customer", "supplier"].map((x) => (
-            <button
-              key={x}
-              type="button"
-              className={type === x ? "tab active" : "tab"}
-              onClick={() => onTypeChange(x)}
-            >
-              {x}
-            </button>
-          ))}
-        </div>
+        {!editing && (
+          <div className="tabs">
+            {["customer", "supplier"].map((x) => (
+              <button
+                key={x}
+                type="button"
+                className={type === x ? "tab active" : "tab"}
+                onClick={() => onTypeChange(x)}
+              >
+                {x}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* ======================================
-          FORM
-      ====================================== */}
+      {/* FORM */}
 
       <form className="form-grid" onSubmit={handleSubmit} noValidate>
-        {/* ==================================
-            CODE
-        ================================== */}
+        {/* CODE */}
 
         <label>
           Code
@@ -183,12 +166,9 @@ function PartyForm({
             readOnly
             className="readonly-input"
           />
-          {/* <small className="field-hint">Automatically generated</small> */}
         </label>
 
-        {/* ==================================
-            NAME
-        ================================== */}
+        {/* NAME */}
 
         <label>
           Name
@@ -203,9 +183,7 @@ function PartyForm({
           {errors.name && <small className="error-text">{errors.name}</small>}
         </label>
 
-        {/* ==================================
-            CONTACT NUMBER
-        ================================== */}
+        {/* CONTACT */}
 
         <label>
           Contact No
@@ -228,10 +206,7 @@ function PartyForm({
           )}
         </label>
 
-        {/* ==================================
-            AREA
-            OPTIONAL
-        ================================== */}
+        {/* AREA */}
 
         <label>
           Area
@@ -247,20 +222,42 @@ function PartyForm({
           )}
         </label>
 
-        {/* ==================================
-            SUBMIT
-        ================================== */}
+        {/* BUTTONS */}
 
         <div className="form-submit">
-          <button
-            className="primary"
-            type="submit"
-            disabled={saving || loadingCode}
-          >
-            <Plus size={18} />
+          {editing ? (
+            <>
+              {/* UPDATE */}
 
-            {saving ? "Saving..." : `Add ${type}`}
-          </button>
+              <button className="primary" type="submit" disabled={saving}>
+                <Pencil size={18} />
+
+                {saving ? "Updating..." : "Update"}
+              </button>
+
+              {/* CANCEL */}
+
+              <button
+                type="button"
+                className="secondary"
+                onClick={onCancelEdit}
+                disabled={saving}
+              >
+                <X size={18} />
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              className="primary"
+              type="submit"
+              disabled={saving || loadingCode}
+            >
+              <Plus size={18} />
+
+              {saving ? "Saving..." : `Add ${type}`}
+            </button>
+          )}
         </div>
       </form>
     </section>

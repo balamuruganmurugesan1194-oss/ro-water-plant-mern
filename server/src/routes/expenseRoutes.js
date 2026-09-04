@@ -13,7 +13,7 @@ import { auth, requireRole } from "../middleware/auth.js";
 const router = express.Router();
 
 // ==========================================
-// AUTHENTICATION
+// ALL EXPENSE ROUTES REQUIRE LOGIN
 // ==========================================
 
 router.use(auth);
@@ -21,6 +21,7 @@ router.use(auth);
 // ==========================================
 // NEXT EXPENSE NUMBER
 // GET /api/expenses/next-number
+// AUTHENTICATED USERS
 // ==========================================
 
 router.get("/next-number", getNextExpenseNumber);
@@ -28,7 +29,7 @@ router.get("/next-number", getNextExpenseNumber);
 // ==========================================
 // GET EXPENSES
 // GET /api/expenses
-// ALL AUTHENTICATED USERS
+// AUTHENTICATED USERS
 // ==========================================
 
 router.get("/", getExpenses);
