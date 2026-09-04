@@ -1,5 +1,5 @@
 import React from "react";
-import { Search } from "lucide-react";
+import { Search, Pencil } from "lucide-react";
 
 import { money } from "../../utils/helpers";
 
@@ -28,10 +28,6 @@ const expenseExportColumns = [
     type: "currency",
   },
   {
-    key: "vendor",
-    label: "Vendor",
-  },
-  {
     key: "notes",
     label: "Notes",
   },
@@ -50,12 +46,17 @@ function ExpenseTable({
   itemsPerPage,
   onMonthChange,
   onSearchChange,
+  onEdit,
   onDelete,
   onPageChange,
   onItemsPerPageChange,
 }) {
   return (
     <section className="panel">
+      {/* ======================================
+          HEADER
+      ====================================== */}
+
       <div className="panel-head">
         <h3>Expense Register</h3>
 
@@ -97,7 +98,9 @@ function ExpenseTable({
         </div>
       </div>
 
-      {/* EMPTY STATE */}
+      {/* ======================================
+          EMPTY STATE
+      ====================================== */}
 
       {items.length === 0 ? (
         <div className="empty-state">No expenses found for this month.</div>
@@ -105,10 +108,19 @@ function ExpenseTable({
         <div className="empty-state">No matching expenses found.</div>
       ) : (
         <>
-          {/* TABLE */}
+          {/* ==================================
+              TABLE
+          ================================== */}
 
           <Table
-            headers={["Expense Number", "Date", "Category", "Amount", "Vendor", "Notes", ""]}
+            headers={[
+              "Expense Number",
+              "Date",
+              "Category",
+              "Amount",
+              "Notes",
+              ...(canEdit ? ["Actions"] : []),
+            ]}
             rows={paginatedItems.map((item) => (
               <tr key={item._id}>
                 {/* EXPENSE NUMBER */}
@@ -127,31 +139,46 @@ function ExpenseTable({
 
                 <td>{money(item.amount)}</td>
 
-                {/* VENDOR */}
-
-                <td>{item.vendor || "—"}</td>
-
                 {/* NOTES */}
 
                 <td>{item.notes || "—"}</td>
 
-                {/* ACTION */}
+                {/* =================================
+                    ACTIONS - ADMIN ONLY
+                ================================= */}
 
-                <td>
-                  {canEdit && (
-                    <DeleteButton
-                      onDelete={() => onDelete(item._id)}
-                      itemName={`${item.category} - ${new Date(
-                        item.date,
-                      ).toLocaleDateString("en-IN")}`}
-                    />
-                  )}
-                </td>
+                {canEdit && (
+                  <td>
+                    <div className="table-actions">
+                      {/* EDIT */}
+
+                      <button
+                        type="button"
+                        className="icon-button edit-button"
+                        title="Edit Expense"
+                        onClick={() => onEdit(item)}
+                      >
+                        <Pencil size={16} />
+                      </button>
+
+                      {/* DELETE */}
+
+                      <DeleteButton
+                        onDelete={() => onDelete(item._id)}
+                        itemName={`${item.category} - ${new Date(
+                          item.date,
+                        ).toLocaleDateString("en-IN")}`}
+                      />
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           />
 
-          {/* PAGINATION */}
+          {/* ==================================
+              PAGINATION
+          ================================== */}
 
           <Pagination
             currentPage={currentPage}

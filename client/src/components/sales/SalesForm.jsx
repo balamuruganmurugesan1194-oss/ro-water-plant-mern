@@ -259,7 +259,7 @@ function SalesForm({
       ====================================== */}
 
       <div className="panel-head">
-        <h3>New Sale</h3>
+        <h3>New Sale - {saleNumber || "Generating..."}</h3>
 
         <div className="tabs">
           {["retail", "supplier", "other"].map((item) => (
@@ -284,7 +284,7 @@ function SalesForm({
             SALE NUMBER
         ==================================== */}
 
-        <label>
+        {/* <label>
           Sale No.
           <input
             type="text"
@@ -293,7 +293,7 @@ function SalesForm({
             placeholder="Generating..."
             className="readonly-input"
           />
-        </label>
+        </label> */}
 
         {/* ====================================
             DATE

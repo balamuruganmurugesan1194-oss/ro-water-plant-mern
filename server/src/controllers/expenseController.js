@@ -170,3 +170,76 @@ export const getNextExpenseNumber = async (req, res) => {
     });
   }
 };
+export const updateExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { date, category, amount, vendor, notes } = req.body;
+
+    // ==========================================
+    // VALIDATION
+    // ==========================================
+
+    if (!date) {
+      return res.status(400).json({
+        message: "Date is required",
+      });
+    }
+
+    if (!category?.trim()) {
+      return res.status(400).json({
+        message: "Category is required",
+      });
+    }
+
+    if (
+      amount === undefined ||
+      amount === null ||
+      Number.isNaN(Number(amount)) ||
+      Number(amount) < 0
+    ) {
+      return res.status(400).json({
+        message: "Valid amount is required",
+      });
+    }
+
+    // ==========================================
+    // FIND EXPENSE
+    // ==========================================
+
+    const expense = await Expense.findById(id);
+
+    if (!expense) {
+      return res.status(404).json({
+        message: "Expense not found",
+      });
+    }
+
+    // ==========================================
+    // UPDATE
+    // ==========================================
+
+    expense.date = date;
+    expense.category = category.trim();
+    expense.amount = Number(amount);
+    expense.vendor = vendor?.trim() || "";
+    expense.notes = notes?.trim() || "";
+
+    // DO NOT CHANGE expenseNumber
+    // It must remain the same when editing.
+
+    await expense.save();
+
+    return res.status(200).json({
+      message: "Expense updated successfully",
+      expense,
+    });
+  } catch (error) {
+    console.error("UPDATE EXPENSE ERROR:", error);
+
+    return res.status(500).json({
+      message: "Failed to update expense",
+      error: error.message,
+    });
+  }
+};

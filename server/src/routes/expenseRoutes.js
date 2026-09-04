@@ -3,8 +3,9 @@ import express from "express";
 import {
   getExpenses,
   createExpense,
+  updateExpense,
   deleteExpense,
-  getNextExpenseNumber
+  getNextExpenseNumber,
 } from "../controllers/expenseController.js";
 
 import { auth, requireRole } from "../middleware/auth.js";
@@ -16,10 +17,18 @@ const router = express.Router();
 // ==========================================
 
 router.use(auth);
+
+// ==========================================
+// NEXT EXPENSE NUMBER
+// GET /api/expenses/next-number
+// ==========================================
+
 router.get("/next-number", getNextExpenseNumber);
+
 // ==========================================
 // GET EXPENSES
 // GET /api/expenses
+// ALL AUTHENTICATED USERS
 // ==========================================
 
 router.get("/", getExpenses);
@@ -31,6 +40,14 @@ router.get("/", getExpenses);
 // ==========================================
 
 router.post("/", requireRole("admin"), createExpense);
+
+// ==========================================
+// UPDATE EXPENSE
+// PUT /api/expenses/:id
+// ADMIN ONLY
+// ==========================================
+
+router.put("/:id", requireRole("admin"), updateExpense);
 
 // ==========================================
 // DELETE EXPENSE

@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus } from "lucide-react";
+import { Plus, Save, X } from "lucide-react";
 
 import expenseCategory from "../../data/expense.json";
 import SearchableSelect from "../common/SearchableSelect";
@@ -11,14 +11,22 @@ function ExpenseForm({
   onChange,
   onSubmit,
   expenseNumber = "",
+  editingId,
+  onCancel,
 }) {
+  const isEditing = Boolean(editingId);
+
   return (
     <section className="panel">
       {/* ======================================
           HEADER
       ====================================== */}
 
-      <h3>Record Expense</h3>
+      <h3>
+        {isEditing
+          ? `Edit Expense - ${expenseNumber}`
+          : `New Expense - ${expenseNumber}`}
+      </h3>
 
       <form
         className="form-grid"
@@ -27,21 +35,6 @@ function ExpenseForm({
           onSubmit();
         }}
       >
-        {/* ====================================
-            EXPENSE NUMBER
-        ==================================== */}
-
-        <label>
-          Expense No.
-          <input
-            type="text"
-            value={expenseNumber || ""}
-            readOnly
-            placeholder="Generating..."
-            className="readonly-input"
-          />
-        </label>
-
         {/* ====================================
             DATE
         ==================================== */}
@@ -95,24 +88,10 @@ function ExpenseForm({
         </label>
 
         {/* ====================================
-            VENDOR
-        ==================================== */}
-
-        <label>
-          Vendor
-          <input
-            type="text"
-            value={form.vendor || ""}
-            placeholder="Enter vendor"
-            onChange={(e) => onChange("vendor", e.target.value)}
-          />
-        </label>
-
-        {/* ====================================
             NOTES
         ==================================== */}
 
-        <div className="form-field">
+        <div className="notes-field">
           <label>Notes</label>
 
           <textarea
@@ -124,15 +103,39 @@ function ExpenseForm({
         </div>
 
         {/* ====================================
-            SAVE
+            BUTTONS
         ==================================== */}
 
         <div className="form-submit">
-          <button className="primary" type="submit" disabled={saving}>
-            <Plus size={18} />
+          {/* UPDATE */}
 
-            {saving ? "Saving..." : "Save Expense"}
-          </button>
+          {isEditing ? (
+            <>
+              <button className="primary" type="submit" disabled={saving}>
+                <Save size={18} />
+
+                {saving ? "Updating..." : "Update Expense"}
+              </button>
+
+              <button
+                type="button"
+                className="secondary"
+                onClick={onCancel}
+                disabled={saving}
+              >
+                <X size={18} />
+                Cancel
+              </button>
+            </>
+          ) : (
+            /* CREATE */
+
+            <button className="primary" type="submit" disabled={saving}>
+              <Plus size={18} />
+
+              {saving ? "Saving..." : "Save Expense"}
+            </button>
+          )}
         </div>
       </form>
     </section>
