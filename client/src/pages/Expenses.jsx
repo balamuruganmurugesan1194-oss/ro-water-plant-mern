@@ -18,6 +18,7 @@ const createBlankForm = () => ({
 function Expenses() {
   const { role } = useAuth();
 
+  // ADMIN ONLY
   const canEdit = role === "admin";
 
   const [items, setItems] = useState([]);
@@ -37,6 +38,30 @@ function Expenses() {
   const [form, setForm] = useState(createBlankForm);
 
   // ==========================================
+  // EDITING
+  // ==========================================
+
+  const [editingId, setEditingId] = useState(null);
+
+  const [expenseNumber, setExpenseNumber] = useState("");
+
+  // ==========================================
+  // EXPENSE NUMBER
+  // ==========================================
+
+  const loadNextExpenseNumber = async () => {
+    try {
+      const response = await api.get("/expenses/next-number");
+
+      setExpenseNumber(response.data?.expenseNumber || "");
+    } catch (err) {
+      console.error("Failed to load next expense number:", err);
+
+      setExpenseNumber("");
+    }
+  };
+
+  // ==========================================
   // LOAD EXPENSES
   // ==========================================
 
@@ -51,6 +76,14 @@ function Expenses() {
       setItems([]);
     }
   };
+
+  // ==========================================
+  // INITIAL LOAD
+  // ==========================================
+
+  useEffect(() => {
+    loadNextExpenseNumber();
+  }, []);
 
   // ==========================================
   // LOAD WHEN MONTH CHANGES
@@ -78,6 +111,8 @@ function Expenses() {
       ? new Date(item.date).toLocaleDateString("en-IN").toLowerCase()
       : "";
 
+    const expenseNumber = item.expenseNumber?.toLowerCase() || "";
+
     const category = item.category?.toLowerCase() || "";
 
     const vendor = item.vendor?.toLowerCase() || "";
@@ -90,6 +125,7 @@ function Expenses() {
         : "";
 
     return (
+      expenseNumber.includes(searchValue) ||
       date.includes(searchValue) ||
       category.includes(searchValue) ||
       vendor.includes(searchValue) ||
@@ -113,19 +149,47 @@ function Expenses() {
   const paginatedItems = filteredItems.slice(startIndex, endIndex);
 
   // ==========================================
-  // SUBMIT
+  // SUBMIT / CREATE / UPDATE
   // ==========================================
 
   const submit = async () => {
     try {
       setSaving(true);
 
-      await api.post("/expenses", {
-        ...form,
+      const payload = {
+        date: form.date,
+        category: form.category,
         amount: Number(form.amount),
-      });
+        vendor: form.vendor,
+        notes: form.notes,
+      };
+
+      // ======================================
+      // UPDATE
+      // ======================================
+
+      if (editingId) {
+        await api.put(`/expenses/${editingId}`, payload);
+
+        alert("Expense updated successfully.");
+      }
+
+      // ======================================
+      // CREATE
+      // ======================================
+      else {
+        await api.post("/expenses", payload);
+
+        alert("Expense saved successfully.");
+      }
+
+      // ======================================
+      // RESET
+      // ======================================
 
       setForm(createBlankForm());
+
+      setEditingId(null);
 
       setErrors({});
 
@@ -133,14 +197,84 @@ function Expenses() {
 
       setCurrentPage(1);
 
-      await load();
-    } catch (err) {
-      console.error("Failed to save expense:", err);
+      // ======================================
+      // RELOAD
+      // ======================================
 
-      alert(err?.response?.data?.message || "Failed to save expense");
+      await load();
+
+      // ======================================
+      // GET NEXT EXPENSE NUMBER
+      // ======================================
+
+      await loadNextExpenseNumber();
+    } catch (err) {
+      console.error(
+        editingId ? "Failed to update expense:" : "Failed to save expense:",
+        err,
+      );
+
+      alert(
+        err?.response?.data?.message ||
+          (editingId ? "Failed to update expense" : "Failed to save expense"),
+      );
     } finally {
       setSaving(false);
     }
+  };
+
+  // ==========================================
+  // EDIT
+  // ==========================================
+
+  const handleEdit = (item) => {
+    // Extra frontend protection
+    if (!canEdit) {
+      return;
+    }
+
+    setEditingId(item._id);
+
+    setExpenseNumber(item.expenseNumber || "");
+
+    setForm({
+      date: item.date
+        ? new Date(item.date).toISOString().split("T")[0]
+        : today(),
+
+      category: item.category || "",
+
+      amount:
+        item.amount !== undefined && item.amount !== null
+          ? String(item.amount)
+          : "",
+
+      vendor: item.vendor || "",
+
+      notes: item.notes || "",
+    });
+
+    setErrors({});
+
+    // Scroll to form
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  // ==========================================
+  // CANCEL EDIT
+  // ==========================================
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+
+    setForm(createBlankForm());
+
+    setErrors({});
+
+    loadNextExpenseNumber();
   };
 
   // ==========================================
@@ -148,10 +282,17 @@ function Expenses() {
   // ==========================================
 
   const handleDelete = async (id) => {
+    // Extra frontend protection
+    if (!canEdit) {
+      return;
+    }
+
     try {
       await api.delete(`/expenses/${id}`);
 
       await load();
+
+      await loadNextExpenseNumber();
 
       const remainingItems = items.length - 1;
 
@@ -189,6 +330,7 @@ function Expenses() {
 
   const handleSearchChange = (value) => {
     setSearch(value);
+
     setCurrentPage(1);
   };
 
@@ -211,20 +353,32 @@ function Expenses() {
 
   const handleItemsPerPageChange = (value) => {
     setItemsPerPage(value);
+
     setCurrentPage(1);
   };
 
   return (
     <div className="content">
+      {/* ======================================
+          ADMIN EXPENSE FORM
+      ====================================== */}
+
       {canEdit && (
         <ExpenseForm
           form={form}
+          expenseNumber={editingId ? expenseNumber : expenseNumber}
           errors={errors}
           saving={saving}
+          editingId={editingId}
           onChange={handleChange}
           onSubmit={submit}
+          onCancel={handleCancelEdit}
         />
       )}
+
+      {/* ======================================
+          EXPENSE TABLE
+      ====================================== */}
 
       <ExpenseTable
         items={items}
@@ -239,6 +393,7 @@ function Expenses() {
         itemsPerPage={itemsPerPage}
         onMonthChange={(value) => setMonth(value)}
         onSearchChange={handleSearchChange}
+        onEdit={handleEdit}
         onDelete={handleDelete}
         onPageChange={handlePageChange}
         onItemsPerPageChange={handleItemsPerPageChange}

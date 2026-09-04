@@ -1,8 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
 import User from "../models/User.js";
-
 
 // ==========================================
 // LOGIN
@@ -11,14 +9,11 @@ import User from "../models/User.js";
 
 export const login = async (req, res) => {
   try {
-    const {
-      email,
-      password,
-    } = req.body;
+    const { email, password } = req.body;
 
-    // ------------------------------
-    // Validation
-    // ------------------------------
+    // ======================================
+    // VALIDATION
+    // ======================================
 
     if (!email?.trim()) {
       return res.status(400).json({
@@ -32,98 +27,113 @@ export const login = async (req, res) => {
       });
     }
 
-    // ------------------------------
-    // Find user
-    // ------------------------------
+    // ======================================
+    // NORMALIZE EMAIL
+    // ======================================
 
-    const normalizedEmail =
-      String(email)
-        .trim()
-        .toLowerCase();
+    const normalizedEmail = String(email).trim().toLowerCase();
 
-    const user =
-      await User.findOne({
-        email: normalizedEmail,
-      });
+    // ======================================
+    // FIND USER
+    // ======================================
+
+    const user = await User.findOne({
+      email: normalizedEmail,
+    }).select("+password");
 
     if (!user) {
       return res.status(401).json({
-        message:
-          "Invalid email or password",
+        message: "Invalid email or password",
       });
     }
 
-    // ------------------------------
-    // Check password
-    // ------------------------------
+    // ======================================
+    // ACTIVE CHECK
+    // ======================================
 
-    const passwordMatch =
-      await bcrypt.compare(
-        password,
-        user.password
-      );
+    if (user.active === false) {
+      return res.status(403).json({
+        message: "Your account has been disabled",
+      });
+    }
+
+    // ======================================
+    // PASSWORD CHECK
+    // ======================================
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
       return res.status(401).json({
-        message:
-          "Invalid email or password",
+        message: "Invalid email or password",
       });
     }
 
-    // ------------------------------
-    // JWT secret
-    // ------------------------------
+    // ======================================
+    // JWT SECRET
+    // ======================================
 
     if (!process.env.JWT_SECRET) {
-      console.error(
-        "JWT_SECRET is not configured"
-      );
+      console.error("JWT_SECRET is not configured");
 
       return res.status(500).json({
-        message:
-          "JWT configuration is missing",
+        message: "JWT configuration is missing",
       });
     }
 
-    // ------------------------------
-    // Create token
-    // ------------------------------
+    // ======================================
+    // CREATE TOKEN
+    // ======================================
 
     const token = jwt.sign(
       {
         id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        role: user.role,
       },
       process.env.JWT_SECRET,
       {
-        expiresIn: "12h",
-      }
+        expiresIn: process.env.JWT_EXPIRES_IN || "12h",
+      },
     );
 
-    // ------------------------------
-    // Response
-    // ------------------------------
+    // ======================================
+    // RESPONSE
+    // ======================================
 
-    res.status(200).json({
+    return res.status(200).json({
       token,
 
       user: {
-        id: user._id,
+        id: user._id.toString(),
         name: user.name,
         email: user.email,
         role: user.role,
+        active: user.active,
       },
     });
   } catch (error) {
-    console.error(
-      "LOGIN ERROR:",
-      error
-    );
+    console.error("LOGIN ERROR:", error);
 
-    res.status(500).json({
-      message: error.message,
+    return res.status(500).json({
+      message: "Login failed",
+    });
+  }
+};
+
+// ==========================================
+// GET CURRENT USER
+// GET /api/auth/me
+// ==========================================
+
+export const getMe = async (req, res) => {
+  try {
+    return res.status(200).json({
+      user: req.user,
+    });
+  } catch (error) {
+    console.error("GET ME ERROR:", error);
+
+    return res.status(500).json({
+      message: "Failed to get user",
     });
   }
 };

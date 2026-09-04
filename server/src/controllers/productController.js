@@ -1,5 +1,6 @@
 import Product from "../models/Product.js";
-
+import Counter from "../models/Counter.js";
+import { getNextNumber } from "../utils/getNextNumber.js";
 export const getProducts = async (req, res) => {
   try {
     const { active } = req.query;
@@ -10,8 +11,7 @@ export const getProducts = async (req, res) => {
       filter.active = active === "true";
     }
 
-    const products = await Product.find(filter)
-      .sort({ name: 1 });
+    const products = await Product.find(filter).sort({ createdAt: -1 });
 
     res.json(products);
   } catch (error) {
@@ -24,12 +24,9 @@ export const getProducts = async (req, res) => {
   }
 };
 
-
 export const getProduct = async (req, res) => {
   try {
-    const product = await Product.findById(
-      req.params.id
-    );
+    const product = await Product.findById(req.params.id);
 
     if (!product) {
       return res.status(404).json({
@@ -48,33 +45,24 @@ export const getProduct = async (req, res) => {
   }
 };
 
+// ==========================================
+// CREATE PRODUCT
+// POST /api/products
+// ==========================================
 
 export const createProduct = async (req, res) => {
   try {
-    console.log(
-      "PRODUCT REQUEST:",
-      req.body
-    );
+    console.log("PRODUCT REQUEST:", req.body);
 
-    const {
-      name,
-      code,
-      category,
-      unit,
-      rate,
-      active,
-      description,
-    } = req.body;
+    const { name, category, unit, rate, active, description } = req.body;
+
+    // ==========================================
+    // VALIDATION
+    // ==========================================
 
     if (!name?.trim()) {
       return res.status(400).json({
         message: "Product name is required",
-      });
-    }
-
-    if (!code?.trim()) {
-      return res.status(400).json({
-        message: "Product code is required",
       });
     }
 
@@ -90,85 +78,143 @@ export const createProduct = async (req, res) => {
       });
     }
 
+    // ==========================================
+    // RATE VALIDATION
+    // ==========================================
+
+    const numericRate = Number(rate);
+
     if (
       rate === undefined ||
-      Number(rate) <= 0
+      rate === null ||
+      rate === "" ||
+      !Number.isFinite(numericRate) ||
+      numericRate <= 0
     ) {
       return res.status(400).json({
-        message:
-          "Rate must be greater than 0",
+        message: "Rate must be greater than 0",
       });
     }
 
-    const normalizedCode =
-      code.trim().toUpperCase();
+    // ==========================================
+    // NORMALIZE VALUES
+    // ==========================================
 
-    const existingProduct =
-      await Product.findOne({
-        code: normalizedCode,
-      });
+    const normalizedName = name.trim();
 
-    if (existingProduct) {
+    // ==========================================
+    // CHECK DUPLICATE PRODUCT NAME
+    // Case-insensitive
+    // ==========================================
+
+    const escapedName = normalizedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const existingName = await Product.findOne({
+      name: {
+        $regex: `^${escapedName}$`,
+        $options: "i",
+      },
+    });
+
+    if (existingName) {
       return res.status(409).json({
-        message:
-          "Product code already exists",
+        field: "name",
+        message: "Product name already exists",
       });
     }
 
-    const product =
-      await Product.create({
-        name: name.trim(),
+    // ==========================================
+    // GENERATE PRODUCT CODE
+    // ATOMIC COUNTER
+    // ==========================================
 
-        code: normalizedCode,
+    // const counter = await Counter.findOneAndUpdate(
+    //   { name: "product" },
+    //   {
+    //     $inc: {
+    //       seq: 1,
+    //     },
+    //   },
+    //   {
+    //     new: true,
+    //     upsert: true,
+    //     setDefaultsOnInsert: true,
+    //   },
+    // );
 
-        category: category.trim(),
+    // const generatedCode = `PRD${String(counter.seq).padStart(4, "0")}`;
 
-        unit: unit.trim(),
+    // console.log("GENERATED PRODUCT CODE:", generatedCode);
+    const generatedCode = await getNextNumber("product", "PRD", 4);
+    // ==========================================
+    // CREATE PRODUCT
+    // ==========================================
 
-        rate: Number(
-          rate
-        ),
-        active:
-          active !== false,
+    const product = await Product.create({
+      name: normalizedName,
 
-        description:
-          description?.trim() || "",
-      });
+      code: generatedCode,
 
-    console.log(
-      "PRODUCT CREATED:",
-      product
-    );
+      category: category.trim(),
 
-    res.status(201).json(product);
+      unit: unit.trim(),
+
+      rate: numericRate,
+
+      active: active !== false,
+
+      description: description?.trim() || "",
+    });
+
+    console.log("PRODUCT CREATED:", product);
+
+    return res.status(201).json(product);
   } catch (error) {
-    console.error(
-      "CREATE PRODUCT ERROR:",
-      error
-    );
+    console.error("CREATE PRODUCT ERROR:", error);
 
-    res.status(500).json({
+    // ==========================================
+    // MONGODB DUPLICATE KEY ERROR
+    // ==========================================
+
+    if (error.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern || {})[0];
+
+      if (duplicateField === "name") {
+        return res.status(409).json({
+          field: "name",
+          message: "Product name already exists",
+        });
+      }
+
+      if (duplicateField === "code") {
+        return res.status(409).json({
+          field: "code",
+          message: "Product code already exists",
+        });
+      }
+
+      return res.status(409).json({
+        message: "Product already exists",
+      });
+    }
+
+    // ==========================================
+    // SERVER ERROR
+    // ==========================================
+
+    return res.status(500).json({
       message: "Failed to create product",
       error: error.message,
     });
   }
 };
 
-
-export const updateProduct = async (
-  req,
-  res
-) => {
+export const updateProduct = async (req, res) => {
   try {
-    const product =
-      await Product.findByIdAndUpdate(
-        req.params.id,
-        req.body,
-        {
-          new: true,
-          runValidators: true,
-        }
-      );
+    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!product) {
       return res.status(404).json({
@@ -178,10 +224,7 @@ export const updateProduct = async (
 
     res.json(product);
   } catch (error) {
-    console.error(
-      "UPDATE PRODUCT ERROR:",
-      error
-    );
+    console.error("UPDATE PRODUCT ERROR:", error);
 
     res.status(500).json({
       message: "Failed to update product",
@@ -190,16 +233,9 @@ export const updateProduct = async (
   }
 };
 
-
-export const deleteProduct = async (
-  req,
-  res
-) => {
+export const deleteProduct = async (req, res) => {
   try {
-    const product =
-      await Product.findByIdAndDelete(
-        req.params.id
-      );
+    const product = await Product.findByIdAndDelete(req.params.id);
 
     if (!product) {
       return res.status(404).json({
@@ -208,14 +244,10 @@ export const deleteProduct = async (
     }
 
     res.json({
-      message:
-        "Product deleted successfully",
+      message: "Product deleted successfully",
     });
   } catch (error) {
-    console.error(
-      "DELETE PRODUCT ERROR:",
-      error
-    );
+    console.error("DELETE PRODUCT ERROR:", error);
 
     res.status(500).json({
       message: "Failed to delete product",
@@ -236,7 +268,7 @@ export const toggleProductStatus = async (req, res) => {
     const product = await Product.findByIdAndUpdate(
       id,
       { active },
-      { new: true }
+      { new: true },
     );
 
     if (!product) {
@@ -247,5 +279,26 @@ export const toggleProductStatus = async (req, res) => {
   } catch (error) {
     console.error("toggleProductStatus error:", error);
     res.status(500).json({ message: "Failed to update status" });
+  }
+};
+export const getNextProductCode = async (req, res) => {
+  try {
+    const counter = await Counter.findOne({
+      name: "product",
+    });
+
+    const nextNumber = (counter?.seq || 0) + 1;
+
+    const code = `PRD${String(nextNumber).padStart(4, "0")}`;
+
+    res.status(200).json({
+      code,
+    });
+  } catch (error) {
+    console.error("GET NEXT PRODUCT CODE ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to generate product code",
+    });
   }
 };

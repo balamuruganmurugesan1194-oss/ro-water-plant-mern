@@ -1,13 +1,32 @@
 import React from "react";
-import { Plus } from "lucide-react";
+import { Plus, Save, X } from "lucide-react";
 
 import expenseCategory from "../../data/expense.json";
 import SearchableSelect from "../common/SearchableSelect";
 
-function ExpenseForm({ form, errors, saving, onChange, onSubmit }) {
+function ExpenseForm({
+  form,
+  errors,
+  saving,
+  onChange,
+  onSubmit,
+  expenseNumber = "",
+  editingId,
+  onCancel,
+}) {
+  const isEditing = Boolean(editingId);
+
   return (
     <section className="panel">
-      <h3>Record Expense</h3>
+      {/* ======================================
+          HEADER
+      ====================================== */}
+
+      <h3>
+        {isEditing
+          ? `Edit Expense - ${expenseNumber}`
+          : `New Expense - ${expenseNumber}`}
+      </h3>
 
       <form
         className="form-grid"
@@ -16,24 +35,30 @@ function ExpenseForm({ form, errors, saving, onChange, onSubmit }) {
           onSubmit();
         }}
       >
-        {/* DATE */}
+        {/* ====================================
+            DATE
+        ==================================== */}
 
         <label>
           Date
           <input
             type="date"
-            value={form.date}
+            value={form.date || ""}
+            className={errors.date ? "input-error" : ""}
             onChange={(e) => onChange("date", e.target.value)}
           />
+          {errors.date && <span className="error-text">{errors.date}</span>}
         </label>
 
-        {/* CATEGORY */}
+        {/* ====================================
+            CATEGORY
+        ==================================== */}
 
         <div className="form-field">
           <label htmlFor="category">Category</label>
 
           <SearchableSelect
-            value={form.category}
+            value={form.category || ""}
             options={expenseCategory}
             placeholder="Select category"
             error={!!errors.category}
@@ -45,36 +70,73 @@ function ExpenseForm({ form, errors, saving, onChange, onSubmit }) {
           )}
         </div>
 
-        {/* AMOUNT */}
+        {/* ====================================
+            AMOUNT
+        ==================================== */}
 
         <label>
           Amount
           <input
             type="number"
             min="0"
-            required
-            value={form.amount}
+            step="0.001"
+            value={form.amount ?? ""}
+            className={errors.amount ? "input-error" : ""}
             onChange={(e) => onChange("amount", e.target.value)}
           />
+          {errors.amount && <span className="error-text">{errors.amount}</span>}
         </label>
 
-        {/* VENDOR */}
+        {/* ====================================
+            NOTES
+        ==================================== */}
 
-        <label>
-          Vendor / Notes
-          <input
-            value={form.vendor}
-            onChange={(e) => onChange("vendor", e.target.value)}
+        <div className="notes-field">
+          <label>Notes</label>
+
+          <textarea
+            rows="3"
+            value={form.notes || ""}
+            placeholder="Enter notes..."
+            onChange={(e) => onChange("notes", e.target.value)}
           />
-        </label>
+        </div>
 
-        {/* SAVE */}
+        {/* ====================================
+            BUTTONS
+        ==================================== */}
 
-        <button className="primary" type="submit" disabled={saving}>
-          <Plus size={18} />
+        <div className="form-submit">
+          {/* UPDATE */}
 
-          {saving ? "Saving..." : "Save Expense"}
-        </button>
+          {isEditing ? (
+            <>
+              <button className="primary" type="submit" disabled={saving}>
+                <Save size={18} />
+
+                {saving ? "Updating..." : "Update Expense"}
+              </button>
+
+              <button
+                type="button"
+                className="secondary"
+                onClick={onCancel}
+                disabled={saving}
+              >
+                <X size={18} />
+                Cancel
+              </button>
+            </>
+          ) : (
+            /* CREATE */
+
+            <button className="primary" type="submit" disabled={saving}>
+              <Plus size={18} />
+
+              {saving ? "Saving..." : "Save Expense"}
+            </button>
+          )}
+        </div>
       </form>
     </section>
   );

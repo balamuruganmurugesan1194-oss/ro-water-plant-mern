@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo } from "react";
+import React, { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext(null);
 
@@ -7,53 +7,62 @@ export function AuthProvider({ children }) {
 
   const [user, setUser] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("user") || "null");
+      const stored = localStorage.getItem("user");
+
+      return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
     }
   });
 
-  const login = ({ token: newToken, user: newUser }) => {
-    localStorage.setItem("token", newToken);
-    localStorage.setItem("user", JSON.stringify(newUser));
+  // ========================================
+  // LOGIN
+  // ========================================
 
-    setToken(newToken);
-    setUser(newUser);
+  const login = (data) => {
+    localStorage.setItem("token", data.token);
+
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    setToken(data.token);
+    setUser(data.user);
   };
+
+  // ========================================
+  // LOGOUT
+  // ========================================
 
   const logout = () => {
     localStorage.removeItem("token");
+
     localStorage.removeItem("user");
 
     setToken(null);
     setUser(null);
   };
 
-  const value = useMemo(
-    () => ({
-      token,
-      user,
-      role: user?.role || null,
-      isAuthenticated: Boolean(token),
-      login,
-      logout,
-    }),
-    [token, user],
-  );
+  // ========================================
+  // AUTH STATUS
+  // ========================================
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const isAuthenticated = Boolean(token && user);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        token,
+        user,
+        role: user?.role || null,
+        isAuthenticated,
+        login,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
-/**
- * Hook for consuming auth state anywhere in the tree.
- * Usage: const { user, role, isAuthenticated, logout } = useAuth();
- */
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-
-  if (!ctx) {
-    throw new Error("useAuth must be used inside <AuthProvider>");
-  }
-
-  return ctx;
+  return useContext(AuthContext);
 }

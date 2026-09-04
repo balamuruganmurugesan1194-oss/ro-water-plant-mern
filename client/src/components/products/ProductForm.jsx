@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import api from "../../api/client";
 import SearchableSelect from "../common/SearchableSelect";
@@ -19,6 +19,41 @@ function ProductForm({
   onReset,
   onSaved,
 }) {
+  const [generatedCode, setGeneratedCode] = useState("");
+  const [loadingCode, setLoadingCode] = useState(false);
+
+  // ==========================================
+  // GET NEXT PRODUCT CODE
+  // ==========================================
+
+  const getNextProductCode = async () => {
+    try {
+      setLoadingCode(true);
+
+      const response = await api.get("/products/next-code");
+
+      setGeneratedCode(response.data.code);
+    } catch (error) {
+      console.error("GET PRODUCT CODE ERROR:", error);
+
+      setGeneratedCode("");
+    } finally {
+      setLoadingCode(false);
+    }
+  };
+
+  // ==========================================
+  // LOAD CODE FOR NEW PRODUCT
+  // ==========================================
+
+  useEffect(() => {
+    if (!editingId) {
+      getNextProductCode();
+    } else {
+      setGeneratedCode(form.code || "");
+    }
+  }, [editingId, form.code]);
+
   // ==========================================
   // HANDLE CHANGE
   // ==========================================
@@ -44,19 +79,15 @@ function ProductForm({
   const validate = () => {
     const newErrors = {};
 
-    if (!form.name.trim()) {
+    if (!form.name?.trim()) {
       newErrors.name = "Product name is required";
     }
 
-    if (!form.code.trim()) {
-      newErrors.code = "Product code is required";
-    }
-
-    if (!form.category.trim()) {
+    if (!form.category?.trim()) {
       newErrors.category = "Category is required";
     }
 
-    if (!form.unit.trim()) {
+    if (!form.unit?.trim()) {
       newErrors.unit = "Unit is required";
     }
 
@@ -70,11 +101,44 @@ function ProductForm({
   };
 
   // ==========================================
+  // CHECK DUPLICATE PRODUCT NAME
+  // ==========================================
+
+  const checkDuplicateName = async () => {
+    const response = await api.get("/products");
+
+    const products = response.data || [];
+
+    const productName = form.name.trim().toLowerCase();
+
+    const duplicateName = products.find((product) => {
+      const isSameProduct = editingId && product._id === editingId;
+
+      return (
+        !isSameProduct && product.name?.trim().toLowerCase() === productName
+      );
+    });
+
+    if (duplicateName) {
+      setErrors((prev) => ({
+        ...prev,
+        name: "Product name already exists",
+      }));
+
+      return false;
+    }
+
+    return true;
+  };
+
+  // ==========================================
   // SAVE PRODUCT
   // ==========================================
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    setErrors({});
 
     if (!validate()) {
       return;
@@ -83,36 +147,62 @@ function ProductForm({
     try {
       setSaving(true);
 
+      // ========================================
+      // CHECK DUPLICATE NAME
+      // ========================================
+
+      const noDuplicateName = await checkDuplicateName();
+
+      if (!noDuplicateName) {
+        return;
+      }
+
+      // ========================================
+      // CREATE PAYLOAD
+      // ========================================
+
       const payload = {
         name: form.name.trim(),
-
-        code: form.code.trim().toUpperCase(),
-
         category: form.category.trim(),
-
         unit: form.unit.trim(),
-
         rate: Number(form.rate),
-
         active: form.active,
-
-        description: form.description.trim(),
+        description: form.description?.trim() || "",
       };
 
-      // UPDATE
+      // ========================================
+      // UPDATE PRODUCT
+      // ========================================
+
       if (editingId) {
         await api.put(`/products/${editingId}`, payload);
       }
 
-      // CREATE
+      // ========================================
+      // CREATE PRODUCT
+      // ========================================
       else {
-        await api.post("/products", payload);
+        const response = await api.post("/products", payload);
+
+        // Backend-generated code
+        if (response.data?.code) {
+          setGeneratedCode(response.data.code);
+        }
       }
 
-      // Reset form
+      // ========================================
+      // RESET FORM
+      // ========================================
+
       onReset();
 
-      // Reload products
+      // ========================================
+      // RELOAD PRODUCTS
+      // ========================================
+      if (!editingId) {
+        await getNextProductCode();
+      }
+
       await onSaved();
     } catch (error) {
       console.error("SAVE PRODUCT ERROR:", error);
@@ -120,6 +210,34 @@ function ProductForm({
       console.error("Response:", error?.response?.data);
 
       console.error("Status:", error?.response?.status);
+
+      // ========================================
+      // DUPLICATE ERROR
+      // ========================================
+
+      if (error?.response?.status === 409) {
+        const field = error?.response?.data?.field;
+
+        if (field === "name") {
+          setErrors((prev) => ({
+            ...prev,
+            name: "Product name already exists",
+          }));
+        } else if (field === "code") {
+          setErrors((prev) => ({
+            ...prev,
+            code: "Product code already exists",
+          }));
+        } else {
+          alert(error?.response?.data?.message || "Product already exists");
+        }
+
+        return;
+      }
+
+      // ========================================
+      // OTHER ERROR
+      // ========================================
 
       alert(
         error?.response?.data?.message ||
@@ -138,7 +256,9 @@ function ProductForm({
 
   return (
     <section className="panel">
-      {/* HEADER */}
+      {/* ========================================
+          HEADER
+      ======================================== */}
 
       <div className="panel-head">
         <h3>{editingId ? "Edit Product" : "New Product"}</h3>
@@ -155,18 +275,36 @@ function ProductForm({
         )}
       </div>
 
-      {/* FORM */}
+      {/* ========================================
+          FORM
+      ======================================== */}
 
       <form className="form-grid" onSubmit={handleSubmit} noValidate>
-        {/* ==================================
+        {/* ======================================
+            PRODUCT CODE
+        ====================================== */}
+
+        <label>
+          Product Code
+          <input
+            type="text"
+            value={loadingCode ? "Generating..." : generatedCode}
+            readOnly
+            className="readonly-input"
+            placeholder="Auto generated"
+          />
+          {/* <small className="field-hint">Automatically generated</small> */}
+        </label>
+
+        {/* ======================================
             PRODUCT NAME
-        ================================== */}
+        ====================================== */}
 
         <label>
           Product Name
           <input
             type="text"
-            value={form.name}
+            value={form.name || ""}
             className={errors.name ? "input-error" : ""}
             placeholder="Enter Name"
             onChange={(e) => handleChange("name", e.target.value)}
@@ -174,25 +312,9 @@ function ProductForm({
           {errors.name && <small className="error-text">{errors.name}</small>}
         </label>
 
-        {/* ==================================
-            PRODUCT CODE
-        ================================== */}
-
-        <label>
-          Product Code
-          <input
-            type="text"
-            value={form.code}
-            className={errors.code ? "input-error" : ""}
-            placeholder="Enter Code"
-            onChange={(e) => handleChange("code", e.target.value.toUpperCase())}
-          />
-          {errors.code && <small className="error-text">{errors.code}</small>}
-        </label>
-
-        {/* ==================================
+        {/* ======================================
             CATEGORY
-        ================================== */}
+        ====================================== */}
 
         <div className="form-field">
           <label htmlFor="category">Category</label>
@@ -210,9 +332,9 @@ function ProductForm({
           )}
         </div>
 
-        {/* ==================================
+        {/* ======================================
             UNIT
-        ================================== */}
+        ====================================== */}
 
         <div className="form-field">
           <label htmlFor="unit">Unit</label>
@@ -228,9 +350,9 @@ function ProductForm({
           {errors.unit && <small className="error-text">{errors.unit}</small>}
         </div>
 
-        {/* ==================================
+        {/* ======================================
             RATE
-        ================================== */}
+        ====================================== */}
 
         <label>
           Rate
@@ -246,32 +368,38 @@ function ProductForm({
           {errors.rate && <small className="error-text">{errors.rate}</small>}
         </label>
 
-        {/* ==================================
+        {/* ======================================
             DESCRIPTION
-        ================================== */}
+        ====================================== */}
 
-        <label>
+        <label className="description-field">
           Description
           <textarea
-            style={{
-              height: 40,
-            }}
-            rows="3"
-            value={form.description}
+            value={form.description || ""}
             placeholder="Product description..."
             onChange={(e) => handleChange("description", e.target.value)}
           />
         </label>
 
-        {/* ==================================
+        {/* ======================================
             SAVE BUTTON
-        ================================== */}
+        ====================================== */}
 
-        <button type="submit" className="primary" disabled={saving}>
-          <Plus size={18} />
+        <div className="form-submit">
+          <button
+            type="submit"
+            className="primary"
+            disabled={saving || loadingCode}
+          >
+            <Plus size={18} />
 
-          {saving ? "Saving..." : editingId ? "Update Product" : "Save Product"}
-        </button>
+            {saving
+              ? "Saving..."
+              : editingId
+                ? "Update Product"
+                : "Save Product"}
+          </button>
+        </div>
       </form>
     </section>
   );

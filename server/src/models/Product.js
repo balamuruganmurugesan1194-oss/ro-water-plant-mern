@@ -5,13 +5,14 @@ const productSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      unique: true, // ✅ Product name must be unique
       trim: true,
     },
 
     code: {
       type: String,
       required: true,
-      unique: true,
+      unique: true, // ✅ Product code must be unique
       trim: true,
       uppercase: true,
     },
@@ -47,12 +48,9 @@ const productSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-const Product = mongoose.model(
-  "Product",
-  productSchema
-);
+const Product = mongoose.model("Product", productSchema);
 
 export default Product;

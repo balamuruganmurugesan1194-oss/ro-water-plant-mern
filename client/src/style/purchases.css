@@ -1,0 +1,16 @@
+/* =========================================================
+   PURCHASES
+========================================================= */
+
+.purchase-items-wrapper {
+  grid-column: 1 / -1;
+}
+
+.purchase-items-wrapper .sale-item-row {
+  grid-template-columns:
+    minmax(250px, 2fr)
+    110px
+    130px
+    140px
+    40px;
+}

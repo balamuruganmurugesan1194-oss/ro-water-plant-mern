@@ -28,6 +28,10 @@ function SalesRegister({
 }) {
   const salesExportColumns = [
     {
+      key: "saleNumber",
+      label: "Sale Number",
+    },
+    {
       key: "date",
       label: "Date",
       type: "date",
@@ -103,6 +107,7 @@ function SalesRegister({
         <>
           <Table
             headers={[
+              "Sale Number",
               "Date",
               "Type",
               "Party",
@@ -113,6 +118,7 @@ function SalesRegister({
             ]}
             rows={sales.map((sale) => (
               <tr key={sale._id}>
+                <td>{sale.saleNumber}</td>
                 <td>{new Date(sale.date).toLocaleDateString("en-IN")}</td>
 
                 <td>{sale.type}</td>

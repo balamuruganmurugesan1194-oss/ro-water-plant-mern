@@ -4,7 +4,8 @@ import Sale from "../models/Sale.js";
 import SaleItem from "../models/SaleItem.js";
 import Party from "../models/Party.js";
 import Product from "../models/Product.js";
-
+import Counter from "../models/counter.js";
+import { getNextNumber } from "../utils/getNextNumber.js";
 // ==========================================
 // GET SALES
 // GET /api/sales
@@ -347,12 +348,17 @@ export const createSale = async (req, res) => {
         message: "Total amount must be greater than 0",
       });
     }
+    // ==================================================
+    // GENERATE SALE NUMBER
+    // ==================================================
 
+    const saleNumber = await getNextNumber("sales", "SAL-", 6);
     // ========================================
     // CREATE SALE
     // ========================================
 
     const sale = await Sale.create({
+      saleNumber,
       type,
 
       date: new Date(date),
@@ -540,6 +546,37 @@ export const deleteSale = async (req, res) => {
 
     res.status(500).json({
       message: error.message,
+    });
+  }
+};
+export const getNextSaleNumber = async (
+  req,
+  res
+) => {
+  try {
+    const counter = await Counter.findOne({
+      name: "sales",
+    });
+
+    const nextSequence =
+      (counter?.seq || 0) + 1;
+
+    const saleNumber = `SAL-${String(
+      nextSequence
+    ).padStart(6, "0")}`;
+
+    return res.status(200).json({
+      saleNumber,
+    });
+  } catch (error) {
+    console.error(
+      "NEXT SALE NUMBER ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Failed to generate next sale number",
     });
   }
 };

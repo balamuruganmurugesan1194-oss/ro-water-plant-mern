@@ -5,6 +5,12 @@ const saleSchema = new mongoose.Schema(
     // ==========================================
     // SALE TYPE
     // ==========================================
+    saleNumber: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
 
     type: {
       type: String,

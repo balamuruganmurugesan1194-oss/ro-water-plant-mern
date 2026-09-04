@@ -1,5 +1,5 @@
 import React from "react";
-import { Search } from "lucide-react";
+import { Search, Pencil } from "lucide-react";
 
 import Table from "../common/Table";
 import DeleteButton from "../common/DeleteButton";
@@ -17,7 +17,10 @@ function PartyTable({
   paginatedItems,
   search,
   onSearchChange,
+  onEdit,
   onDelete,
+  canEdit,
+  canDelete,
   currentPage,
   totalPages,
   totalItems,
@@ -43,7 +46,6 @@ function PartyTable({
     {
       key: "type",
       label: "Type",
-
       value: (row) =>
         row.type ? row.type.charAt(0).toUpperCase() + row.type.slice(1) : "",
     },
@@ -60,14 +62,10 @@ function PartyTable({
   ];
 
   // ==========================================
-  // TYPE LABEL
+  // LABELS
   // ==========================================
 
   const typeLabel = type === "customer" ? "customer" : "supplier";
-
-  // ==========================================
-  // REGISTER TITLE
-  // ==========================================
 
   const registerTitle =
     type === "customer" ? "Customer Register" : "Supplier Register";
@@ -89,10 +87,6 @@ function PartyTable({
 
       <div className="panel-head">
         <h3>{type === "customer" ? "Customers" : "Suppliers"}</h3>
-
-        {/* ====================================
-            FILTERS
-        ==================================== */}
 
         <div className="filters">
           {/* SEARCH */}
@@ -139,7 +133,7 @@ function PartyTable({
           ================================== */}
 
           <Table
-            headers={["Code", "Name", "Contact No", "Area", "Actions"]}
+            headers={["Code", "Name", "Contact No", "Area", ...(canEdit || canDelete ? ["Actions"] : [])]}
             rows={paginatedItems.map((party) => (
               <tr key={party._id}>
                 {/* CODE */}
@@ -156,16 +150,34 @@ function PartyTable({
 
                 {/* AREA */}
 
-                <td>{party.address}</td>
+                <td>{party.address || "-"}</td>
 
-                {/* ACTION */}
+                {/* ACTIONS */}
 
                 <td>
                   <div className="table-actions">
-                    <DeleteButton
-                      onDelete={() => onDelete(party._id)}
-                      itemName={party.name}
-                    />
+                    {/* EDIT */}
+
+                    {canEdit && (
+                      <button
+                        type="button"
+                        className="icon-button edit-button"
+                        title="Edit"
+                        onClick={() => onEdit(party)}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                    )}
+
+                    {/* DELETE */}
+
+                    {canDelete && (
+                      <DeleteButton
+                        onDelete={() => onDelete(party._id)}
+                        itemName={party.name}
+                      />
+                    )}
+
                   </div>
                 </td>
               </tr>

@@ -14,6 +14,8 @@ import Parties from "./pages/Parties";
 import Products from "./pages/Products";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
+// import Purchases from "./pages/Purchases";
+// import Inventory from "./pages/Inventory";
 
 function App() {
   return (
@@ -28,6 +30,8 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={["admin", "staff"]} />}>
           <Route element={<MainLayout />}>
             <Route path="/products" element={<Products />} />
+            {/* <Route path="/purchases" element={<Purchases />} />
+            <Route path="/inventory" element={<Inventory />} /> */}
             <Route path="/sales" element={<Sales />} />
             <Route path="/parties" element={<Parties />} />
           </Route>

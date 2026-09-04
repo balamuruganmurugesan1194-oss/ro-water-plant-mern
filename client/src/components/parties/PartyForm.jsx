@@ -1,5 +1,5 @@
-import React from "react";
-import { Plus } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Plus, Pencil, X } from "lucide-react";
 import api from "../../api/client";
 
 // ==========================================
@@ -15,7 +15,48 @@ function PartyForm({
   saving,
   onSubmit,
   onTypeChange,
+  editing,
+  onCancelEdit,
 }) {
+  const [loadingCode, setLoadingCode] = useState(false);
+
+  // ==========================================
+  // GET NEXT PARTY CODE
+  // ==========================================
+
+  const getNextPartyCode = async (partyType = type) => {
+    try {
+      setLoadingCode(true);
+
+      const response = await api.get("/parties/next-code", {
+        params: {
+          type: partyType,
+        },
+      });
+
+      const nextCode = response.data.code;
+
+      setForm((prev) => ({
+        ...prev,
+        code: nextCode,
+      }));
+    } catch (error) {
+      console.error("FAILED TO FETCH PARTY CODE:", error);
+    } finally {
+      setLoadingCode(false);
+    }
+  };
+
+  // ==========================================
+  // LOAD CODE
+  // ==========================================
+
+  useEffect(() => {
+    if (type && !editing) {
+      getNextPartyCode(type);
+    }
+  }, [type, editing]);
+
   // ==========================================
   // HANDLE CHANGE
   // ==========================================
@@ -41,41 +82,13 @@ function PartyForm({
   const validate = () => {
     const newErrors = {};
 
-    // ========================================
-    // CODE
-    // ========================================
-
-    const code = form.code.trim();
-
-    if (!code) {
-      newErrors.code = "Code is required";
-    } else if (code.length < 2) {
-      newErrors.code = "Code must be at least 2 characters";
-    } else if (code.length > 20) {
-      newErrors.code = "Code cannot exceed 20 characters";
-    } else if (!/^[A-Za-z0-9_-]+$/.test(code)) {
-      newErrors.code = "Code can contain only letters, numbers, _ and -";
-    }
-
-    // ========================================
-    // NAME
-    // ========================================
-
     const name = form.name.trim();
 
     if (!name) {
       newErrors.name = "Name is required";
-    } else if (name.length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
-    } else if (name.length > 50) {
-      newErrors.name = "Name cannot exceed 50 characters";
     } else if (!/^[A-Za-z\s.'-]+$/.test(name)) {
       newErrors.name = "Name can contain only letters, spaces, . ' and -";
     }
-
-    // ========================================
-    // CONTACT
-    // ========================================
 
     const contact = form.contactNumber.trim();
 
@@ -85,18 +98,10 @@ function PartyForm({
       newErrors.contactNumber = "Enter a valid 10-digit mobile number";
     }
 
-    // ========================================
-    // AREA
-    // ========================================
-
-    const address = form.address.trim();
-
-    if (!address) {
-      newErrors.address = "Area is required";
-    } else if (address.length < 2) {
-      newErrors.address = "Area must be at least 2 characters";
-    } else if (address.length > 100) {
-      newErrors.address = "Area cannot exceed 100 characters";
+    if (form.address?.trim()) {
+      if (form.address.trim().length > 100) {
+        newErrors.address = "Area cannot exceed 100 characters";
+      }
     }
 
     setErrors(newErrors);
@@ -124,54 +129,46 @@ function PartyForm({
 
   return (
     <section className="panel">
-      {/* ======================================
-          HEADER
-      ====================================== */}
+      {/* HEADER */}
 
       <div className="panel-head">
-        <h3>Directory</h3>
+        <h3>
+          {editing
+            ? `Edit ${type === "customer" ? "Customer" : "Supplier"}`
+            : "Directory"}
+        </h3>
 
-        {/* TABS */}
-
-        <div className="tabs">
-          {["customer", "supplier"].map((x) => (
-            <button
-              key={x}
-              type="button"
-              className={type === x ? "tab active" : "tab"}
-              onClick={() => onTypeChange(x)}
-            >
-              {x}
-            </button>
-          ))}
-        </div>
+        {!editing && (
+          <div className="tabs">
+            {["customer", "supplier"].map((x) => (
+              <button
+                key={x}
+                type="button"
+                className={type === x ? "tab active" : "tab"}
+                onClick={() => onTypeChange(x)}
+              >
+                {x}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* ======================================
-          FORM
-      ====================================== */}
+      {/* FORM */}
 
       <form className="form-grid" onSubmit={handleSubmit} noValidate>
-        {/* ==================================
-            CODE
-        ================================== */}
+        {/* CODE */}
 
         <label>
           Code
           <input
-            required
-            value={form.code}
-            maxLength={20}
-            placeholder="Enter code"
-            className={errors.code ? "input-error" : ""}
-            onChange={(e) => handleChange("code", e.target.value.toUpperCase())}
+            value={loadingCode ? "Generating..." : form.code}
+            readOnly
+            className="readonly-input"
           />
-          {errors.code && <small className="error-text">{errors.code}</small>}
         </label>
 
-        {/* ==================================
-            NAME
-        ================================== */}
+        {/* NAME */}
 
         <label>
           Name
@@ -186,9 +183,7 @@ function PartyForm({
           {errors.name && <small className="error-text">{errors.name}</small>}
         </label>
 
-        {/* ==================================
-            CONTACT NUMBER
-        ================================== */}
+        {/* CONTACT */}
 
         <label>
           Contact No
@@ -211,14 +206,11 @@ function PartyForm({
           )}
         </label>
 
-        {/* ==================================
-            AREA
-        ================================== */}
+        {/* AREA */}
 
         <label>
           Area
           <input
-            required
             value={form.address}
             maxLength={100}
             placeholder="Enter area"
@@ -230,15 +222,43 @@ function PartyForm({
           )}
         </label>
 
-        {/* ==================================
-            SUBMIT
-        ================================== */}
+        {/* BUTTONS */}
 
-        <button className="primary" type="submit" disabled={saving}>
-          <Plus size={18} />
+        <div className="form-submit">
+          {editing ? (
+            <>
+              {/* UPDATE */}
 
-          {saving ? "Saving..." : `Add ${type}`}
-        </button>
+              <button className="primary" type="submit" disabled={saving}>
+                <Pencil size={18} />
+
+                {saving ? "Updating..." : "Update"}
+              </button>
+
+              {/* CANCEL */}
+
+              <button
+                type="button"
+                className="secondary"
+                onClick={onCancelEdit}
+                disabled={saving}
+              >
+                <X size={18} />
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              className="primary"
+              type="submit"
+              disabled={saving || loadingCode}
+            >
+              <Plus size={18} />
+
+              {saving ? "Saving..." : `Add ${type}`}
+            </button>
+          )}
+        </div>
       </form>
     </section>
   );

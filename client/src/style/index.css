@@ -31,3 +31,4 @@
 
 /* 7. Responsive - ALWAYS LAST */
 @import "./responsive.css";
+@import "./purchases.css";

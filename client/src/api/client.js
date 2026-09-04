@@ -1,23 +1,25 @@
 import axios from "axios";
 
-export const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-
 const api = axios.create({
-  baseURL: API,
+  baseURL: "http://localhost:5000/api",
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// Attach the token to every outgoing request automatically.
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
-  return config;
-});
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
 
-// If the token is invalid/expired, force a clean logout.
 api.interceptors.response.use(
   (response) => response,
   (error) => {

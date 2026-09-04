@@ -8,6 +8,8 @@ import {
   Users,
   LogOut,
   Droplets,
+  ShoppingBag,
+  Package2
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -30,6 +32,18 @@ const NAV_ITEMS = [
     icon: Users,
     roles: ["admin", "staff"],
   },
+//   {
+//     to: "/purchases",
+//     label: "Purchases",
+//     icon: ShoppingBag,
+//     roles: ["admin", "staff"],
+//   },
+//   {
+//   to: "/inventory",
+//   label: "Inventory",
+//   icon: Package2,
+//   roles: ["admin", "staff"],
+// },
   {
     to: "/sales",
     label: "Sales",
@@ -50,9 +64,7 @@ function MainLayout() {
 
   const role = user?.role?.toLowerCase();
 
-  const visibleNavItems = NAV_ITEMS.filter((item) =>
-    item.roles.includes(role)
-  );
+  const visibleNavItems = NAV_ITEMS.filter((item) => item.roles.includes(role));
 
   const currentLabel =
     NAV_ITEMS.find((item) => item.to === location.pathname)?.label ||
@@ -79,9 +91,7 @@ function MainLayout() {
             <NavLink
               key={to}
               to={to}
-              className={({ isActive }) =>
-                isActive ? "nav active" : "nav"
-              }
+              className={({ isActive }) => (isActive ? "nav active" : "nav")}
             >
               <Icon size={19} />
               <span>{label}</span>
@@ -106,9 +116,7 @@ function MainLayout() {
             <p>2026 RO Water Plant Management</p>
           </div>
 
-          <span className="role">
-            {user?.role?.toUpperCase()}
-          </span>
+          <span className="role">{user?.role?.toUpperCase()}</span>
         </header>
 
         {/* ===================================================

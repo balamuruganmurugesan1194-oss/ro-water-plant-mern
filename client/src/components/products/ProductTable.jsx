@@ -33,35 +33,51 @@ function ProductTable({
   onItemsPerPageChange,
 }) {
   // ==========================================
+  // SEARCH PRODUCTS
+  // ==========================================
+
+  const filteredProducts = products.filter((product) => {
+    const searchText = search.trim().toLowerCase();
+
+    if (!searchText) return true;
+
+    return (
+      product.name?.toLowerCase().includes(searchText) ||
+      product.code?.toLowerCase().includes(searchText) ||
+      product.category?.toLowerCase().includes(searchText) ||
+      product.unit?.toLowerCase().includes(searchText)
+    );
+  });
+
+  // ==========================================
   // EXPORT COLUMNS
   // ==========================================
 
   const productExportColumns = [
     {
+      key: "code",
+      label: "Product Code",
+    },
+    {
       key: "name",
       label: "Product Name",
     },
-
     {
       key: "category",
       label: "Category",
     },
-
     {
       key: "unit",
       label: "Unit",
     },
-
     {
       key: "sellingPrice",
       label: "Selling Price",
       type: "currency",
     },
-
     {
       key: "active",
       label: "Status",
-
       value: (row) => (row.active ? "Active" : "Inactive"),
     },
   ];
@@ -72,9 +88,7 @@ function ProductTable({
 
   return (
     <section className="panel">
-      {/* ======================================
-          HEADER
-      ====================================== */}
+      {/* HEADER */}
 
       <div className="panel-head">
         <h3>Products</h3>
@@ -105,55 +119,42 @@ function ProductTable({
         </div>
       </div>
 
-      {/* ======================================
-          LOADING / EMPTY / TABLE
-      ====================================== */}
+      {/* LOADING / EMPTY / TABLE */}
 
       {loading ? (
         <Loading />
-      ) : allProducts.length === 0 ? (
-        <div className="empty-state">No products found.</div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="empty-state">
+          {search ? `No products found for "${search}"` : "No products found."}
+        </div>
       ) : (
         <>
-          {/* ==================================
-              TABLE
-          ================================== */}
+          {/* TABLE */}
 
           <div className="table-wrapper">
             <table className="table">
-              {/* TABLE HEAD */}
-
               <thead>
                 <tr>
-                  <th>Product</th>
-
                   <th>Code</th>
-
+                  <th>Product</th>
                   <th>Category</th>
-
                   <th>Unit</th>
-
                   <th>Rate</th>
 
                   {canEdit && <th>Action</th>}
                 </tr>
               </thead>
 
-              {/* TABLE BODY */}
-
               <tbody>
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <tr key={product._id}>
-                    {/* PRODUCT */}
-
-                    <td>
-                      <strong>{product.name}</strong>
-                    </td>
-
                     {/* CODE */}
 
                     <td>{product.code}</td>
 
+                    {/* PRODUCT */}
+
+                    <td>{product.name}</td>
                     {/* CATEGORY */}
 
                     <td>{product.category}</td>
@@ -171,26 +172,21 @@ function ProductTable({
                     {canEdit && (
                       <td>
                         <div className="table-actions">
-                          {/* STATUS */}
-
                           <ProductStatusToggle
                             isActive={product.active}
                             disabled={togglingId === product._id}
                             onChange={() => onToggleActive(product)}
                           />
-
                           {/* EDIT */}
 
                           <button
                             type="button"
-                            className="icon"
-                            title="Edit"
+                            className="icon-button edit-button"
+                            title="Edit Expense"
                             onClick={() => onEdit(product)}
                           >
                             <Pencil size={16} />
                           </button>
-
-                          {/* DELETE */}
 
                           <DeleteButton
                             onDelete={() => onDelete(product._id)}
@@ -205,9 +201,7 @@ function ProductTable({
             </table>
           </div>
 
-          {/* ==================================
-              PAGINATION
-          ================================== */}
+          {/* PAGINATION */}
 
           <Pagination
             currentPage={currentPage}

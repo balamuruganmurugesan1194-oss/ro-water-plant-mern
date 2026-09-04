@@ -54,6 +54,7 @@
   position: relative;
 
   width: 100%;
+  top: 5px;
 }
 
 .searchable-select-button {
@@ -97,6 +98,7 @@
 
 .selected-value {
   color: var(--text);
+  font-weight: 400;
 }
 
 .placeholder-value {
