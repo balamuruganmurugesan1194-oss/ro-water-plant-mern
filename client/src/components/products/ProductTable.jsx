@@ -177,11 +177,12 @@ function ProductTable({
                             disabled={togglingId === product._id}
                             onChange={() => onToggleActive(product)}
                           />
+                          {/* EDIT */}
 
                           <button
                             type="button"
-                            className="icon"
-                            title="Edit"
+                            className="icon-button edit-button"
+                            title="Edit Expense"
                             onClick={() => onEdit(product)}
                           >
                             <Pencil size={16} />
