@@ -4,7 +4,7 @@ import Sale from "../models/Sale.js";
 import SaleItem from "../models/SaleItem.js";
 import Party from "../models/Party.js";
 import Product from "../models/Product.js";
-import Counter from "../models/counter.js";
+import Counter from "../models/Counter.js";
 import { getNextNumber } from "../utils/getNextNumber.js";
 // ==========================================
 // GET SALES
