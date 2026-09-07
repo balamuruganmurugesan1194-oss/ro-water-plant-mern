@@ -1,31 +1,30 @@
 import mongoose from "mongoose";
 
-const userSchema = new mongoose.Schema(
+const permissionSchema = new mongoose.Schema(
   {
+    key: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+
     name: {
       type: String,
       required: true,
       trim: true,
     },
 
-    email: {
+    module: {
       type: String,
       required: true,
-      unique: true,
-      lowercase: true,
       trim: true,
     },
 
-    password: {
+    description: {
       type: String,
-      required: true,
-      select: false,
-    },
-
-    role: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Role",
-      required: true,
+      default: "",
+      trim: true,
     },
 
     isActive: {
@@ -38,4 +37,4 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-export default mongoose.model("User", userSchema);
+export default mongoose.model("Permission", permissionSchema);
