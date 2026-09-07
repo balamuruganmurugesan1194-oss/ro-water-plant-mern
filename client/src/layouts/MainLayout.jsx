@@ -32,18 +32,6 @@ const NAV_ITEMS = [
     icon: Users,
     roles: ["admin", "staff"],
   },
-//   {
-//     to: "/purchases",
-//     label: "Purchases",
-//     icon: ShoppingBag,
-//     roles: ["admin", "staff"],
-//   },
-//   {
-//   to: "/inventory",
-//   label: "Inventory",
-//   icon: Package2,
-//   roles: ["admin", "staff"],
-// },
   {
     to: "/sales",
     label: "Sales",

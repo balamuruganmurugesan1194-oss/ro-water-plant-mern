@@ -9,8 +9,6 @@ import expenseRoutes from "./routes/expenseRoutes.js";
 import partyRoutes from "./routes/partyRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
-// import purchaseRoutes from "./routes/purchaseRoutes.js";
-// import inventoryRoutes from "./routes/inventoryRoutes.js";
 
 const app = express();
 
@@ -50,8 +48,6 @@ app.use("/api/expenses", expenseRoutes);
 app.use("/api/parties", partyRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/products", productRoutes);
-// app.use("/api/purchases", purchaseRoutes);
-// app.use("/api/inventory", inventoryRoutes);
 const port = process.env.PORT || 5000;
 
 mongoose
