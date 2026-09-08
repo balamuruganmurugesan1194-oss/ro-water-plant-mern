@@ -16,10 +16,28 @@ const createBlankForm = () => ({
 });
 
 function Expenses() {
-  const { role } = useAuth();
+  const { isSuperAdmin, permissions = [] } = useAuth();
 
-  // ADMIN ONLY
-  const canEdit = role === "admin";
+  // ==========================================
+  // PERMISSIONS
+  // ==========================================
+
+  const hasPermission = (permission) => {
+    if (isSuperAdmin === true) {
+      return true;
+    }
+
+    if (permissions.includes("*")) {
+      return true;
+    }
+
+    return permissions.includes(permission);
+  };
+
+  const canView = hasPermission("expenses.view");
+  const canCreate = hasPermission("expenses.create");
+  const canEdit = hasPermission("expenses.edit");
+  const canDelete = hasPermission("expenses.delete");
 
   const [items, setItems] = useState([]);
 
@@ -50,6 +68,10 @@ function Expenses() {
   // ==========================================
 
   const loadNextExpenseNumber = async () => {
+    if (!canCreate && !canEdit) {
+      return;
+    }
+
     try {
       const response = await api.get("/expenses/next-number");
 
@@ -66,6 +88,10 @@ function Expenses() {
   // ==========================================
 
   const load = async () => {
+    if (!canView) {
+      return;
+    }
+
     try {
       const response = await api.get(`/expenses?month=${month}`);
 
@@ -82,8 +108,10 @@ function Expenses() {
   // ==========================================
 
   useEffect(() => {
-    loadNextExpenseNumber();
-  }, []);
+    if (canCreate || canEdit) {
+      loadNextExpenseNumber();
+    }
+  }, [canCreate, canEdit]);
 
   // ==========================================
   // LOAD WHEN MONTH CHANGES
@@ -93,8 +121,10 @@ function Expenses() {
     setCurrentPage(1);
     setSearch("");
 
-    load();
-  }, [month]);
+    if (canView) {
+      load();
+    }
+  }, [month, canView]);
 
   // ==========================================
   // SEARCH
@@ -153,6 +183,20 @@ function Expenses() {
   // ==========================================
 
   const submit = async () => {
+    // ======================================
+    // PERMISSION PROTECTION
+    // ======================================
+
+    if (editingId && !canEdit) {
+      alert("You do not have permission to edit expenses.");
+      return;
+    }
+
+    if (!editingId && !canCreate) {
+      alert("You do not have permission to create expenses.");
+      return;
+    }
+
     try {
       setSaving(true);
 
@@ -230,6 +274,7 @@ function Expenses() {
   const handleEdit = (item) => {
     // Extra frontend protection
     if (!canEdit) {
+      alert("You do not have permission to edit expenses.");
       return;
     }
 
@@ -283,7 +328,8 @@ function Expenses() {
 
   const handleDelete = async (id) => {
     // Extra frontend protection
-    if (!canEdit) {
+    if (!canDelete) {
+      alert("You do not have permission to delete expenses.");
       return;
     }
 
@@ -357,19 +403,37 @@ function Expenses() {
     setCurrentPage(1);
   };
 
+  // ==========================================
+  // NO VIEW PERMISSION
+  // ==========================================
+
+  if (!canView) {
+    return (
+      <div className="content">
+        <section className="panel">
+          <div className="empty-state">
+            You do not have permission to view expenses.
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="content">
       {/* ======================================
-          ADMIN EXPENSE FORM
+          EXPENSE FORM
       ====================================== */}
 
-      {canEdit && (
+      {(canCreate || canEdit) && (
         <ExpenseForm
           form={form}
-          expenseNumber={editingId ? expenseNumber : expenseNumber}
+          expenseNumber={expenseNumber}
           errors={errors}
           saving={saving}
           editingId={editingId}
+          canCreate={canCreate}
+          canEdit={canEdit}
           onChange={handleChange}
           onSubmit={submit}
           onCancel={handleCancelEdit}
@@ -387,6 +451,7 @@ function Expenses() {
         month={month}
         search={search}
         canEdit={canEdit}
+        canDelete={canDelete}
         currentPage={currentPage}
         totalPages={totalPages}
         totalItems={totalItems}

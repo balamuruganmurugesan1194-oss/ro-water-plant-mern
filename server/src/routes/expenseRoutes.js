@@ -8,7 +8,7 @@ import {
   getNextExpenseNumber,
 } from "../controllers/expenseController.js";
 
-import { auth, requireRole } from "../middleware/auth.js";
+import { auth, requirePermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -21,41 +21,40 @@ router.use(auth);
 // ==========================================
 // NEXT EXPENSE NUMBER
 // GET /api/expenses/next-number
-// AUTHENTICATED USERS
 // ==========================================
 
-router.get("/next-number", getNextExpenseNumber);
+router.get(
+  "/next-number",
+  requirePermission("expenses.create"),
+  getNextExpenseNumber,
+);
 
 // ==========================================
 // GET EXPENSES
 // GET /api/expenses
-// AUTHENTICATED USERS
 // ==========================================
 
-router.get("/", getExpenses);
+router.get("/", requirePermission("expenses.view"), getExpenses);
 
 // ==========================================
 // CREATE EXPENSE
 // POST /api/expenses
-// ADMIN ONLY
 // ==========================================
 
-router.post("/", requireRole("admin"), createExpense);
+router.post("/", requirePermission("expenses.create"), createExpense);
 
 // ==========================================
 // UPDATE EXPENSE
 // PUT /api/expenses/:id
-// ADMIN ONLY
 // ==========================================
 
-router.put("/:id", requireRole("admin"), updateExpense);
+router.put("/:id", requirePermission("expenses.edit"), updateExpense);
 
 // ==========================================
 // DELETE EXPENSE
 // DELETE /api/expenses/:id
-// ADMIN ONLY
 // ==========================================
 
-router.delete("/:id", requireRole("admin"), deleteExpense);
+router.delete("/:id", requirePermission("expenses.delete"), deleteExpense);
 
 export default router;

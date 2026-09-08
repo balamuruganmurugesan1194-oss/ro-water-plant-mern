@@ -1,0 +1,68 @@
+.settings-menu {
+  width: 100%;
+}
+
+.settings-parent {
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.settings-parent span {
+  flex: 1;
+}
+
+.settings-arrow {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+}
+
+.settings-arrow.open {
+  transform: rotate(180deg);
+}
+
+.settings-submenu {
+  margin: 4px 0 8px 18px;
+  padding-left: 12px;
+
+  border-left: 1px solid #e5e7eb;
+
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-subnav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  min-height: 38px;
+
+  padding: 8px 10px;
+
+  color: #eef1f7;
+
+  text-decoration: none;
+
+  border-radius: 6px;
+
+  font-size: 13px;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.settings-subnav:hover {
+  background: #f0f9ff;
+  color: #0284c7;
+}
+
+.settings-subnav.active {
+  background: #e0f2fe;
+  color: #0284c7;
+  font-weight: 600;
+}

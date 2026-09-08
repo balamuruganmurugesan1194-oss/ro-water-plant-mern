@@ -24,9 +24,29 @@ const createBlankProduct = () => ({
 // ==========================================
 
 function Products() {
-  const { role } = useAuth();
+  // ==========================================
+  // AUTH / PERMISSIONS
+  // ==========================================
 
-  const canEdit = role === "admin";
+  const { isSuperAdmin, permissions = [] } = useAuth();
+
+  const hasPermission = (permission) => {
+    if (isSuperAdmin === true) {
+      return true;
+    }
+
+    if (permissions.includes("*")) {
+      return true;
+    }
+
+    return permissions.includes(permission);
+  };
+
+  const canCreate = hasPermission("products.create");
+  const canEdit = hasPermission("products.edit");
+  const canDelete = hasPermission("products.delete");
+
+  const canView = hasPermission("products.view");
 
   // ==========================================
   // STATE
@@ -61,6 +81,10 @@ function Products() {
   // ==========================================
 
   const loadProducts = async () => {
+    if (!canView) {
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -83,10 +107,14 @@ function Products() {
   // ==========================================
 
   useEffect(() => {
+    if (!canView) {
+      return;
+    }
+
     setCurrentPage(1);
 
     loadProducts();
-  }, [search]);
+  }, [search, canView]);
 
   // ==========================================
   // PAGINATION
@@ -119,6 +147,12 @@ function Products() {
   // ==========================================
 
   const handleEdit = (product) => {
+    if (!canEdit) {
+      alert("You do not have permission to edit products.");
+
+      return;
+    }
+
     setEditingId(product._id);
 
     setForm({
@@ -151,6 +185,12 @@ function Products() {
   // ==========================================
 
   const deleteProduct = async (id) => {
+    if (!canDelete) {
+      alert("You do not have permission to delete products.");
+
+      return;
+    }
+
     try {
       await api.delete(`/products/${id}`);
 
@@ -176,6 +216,12 @@ function Products() {
   // ==========================================
 
   const handleToggleActive = async (product) => {
+    if (!canEdit) {
+      alert("You do not have permission to edit products.");
+
+      return;
+    }
+
     const newStatus = !product.active;
 
     // Confirm only when deactivating
@@ -255,6 +301,22 @@ function Products() {
   };
 
   // ==========================================
+  // ACCESS DENIED
+  // ==========================================
+
+  if (!canView) {
+    return (
+      <div className="content">
+        <section className="panel">
+          <div className="empty-state">
+            You do not have permission to view products.
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  // ==========================================
   // RENDER
   // ==========================================
 
@@ -264,17 +326,22 @@ function Products() {
           PRODUCT FORM
       ======================================== */}
 
-      <ProductForm
-        form={form}
-        setForm={setForm}
-        errors={errors}
-        setErrors={setErrors}
-        editingId={editingId}
-        saving={saving}
-        setSaving={setSaving}
-        onReset={resetForm}
-        onSaved={loadProducts}
-      />
+      {(canCreate || (editingId && canEdit)) && (
+        <ProductForm
+          form={form}
+          setForm={setForm}
+          errors={errors}
+          setErrors={setErrors}
+          editingId={editingId}
+          saving={saving}
+          setSaving={setSaving}
+          onReset={resetForm}
+          onSaved={loadProducts}
+          // NEW - PERMISSION PROPS
+          canCreate={canCreate}
+          canEdit={canEdit}
+        />
+      )}
 
       {/* ========================================
           PRODUCT LIST
@@ -286,7 +353,9 @@ function Products() {
         loading={loading}
         search={search}
         onSearchChange={setSearch}
+        // NEW - SEPARATE PERMISSIONS
         canEdit={canEdit}
+        canDelete={canDelete}
         togglingId={togglingId}
         onEdit={handleEdit}
         onDelete={deleteProduct}

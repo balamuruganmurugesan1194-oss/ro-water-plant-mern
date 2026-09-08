@@ -1,34 +1,68 @@
 import React from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+
 import { useAuth } from "../context/AuthContext";
 
-/**
- * Wraps a group of routes.
- *
- * - No `allowedRoles` prop  -> just requires the user to be logged in.
- * - `allowedRoles={["admin"]}` -> also requires the user's role to match.
- *
- * Usage in App.jsx:
- *
- *   <Route element={<ProtectedRoute />}>
- *     <Route path="/dashboard" element={<Dashboard />} />
- *   </Route>
- *
- *   <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
- *     <Route path="/settings" element={<AdminSettings />} />
- *   </Route>
- */
-function ProtectedRoute({ allowedRoles }) {
-  const { isAuthenticated, role } = useAuth();
+function ProtectedRoute({ allowedRoles, requiredPermission }) {
+  const {
+    isAuthenticated,
+    roleName,
+    isSuperAdmin,
+    permissions = [],
+  } = useAuth();
+
   const location = useLocation();
 
+  // ========================================
+  // NOT LOGGED IN
+  // ========================================
+
   if (!isAuthenticated) {
-    // Remember where the user was headed so Login can send them back.
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{
+          from: location,
+        }}
+      />
+    );
   }
 
-  if (allowedRoles && !allowedRoles.includes(role)) {
-    return <Navigate to="/unauthorized" replace />;
+  // ========================================
+  // ADMINISTRATOR
+  // ========================================
+
+  if (isSuperAdmin === true) {
+    return <Outlet />;
+  }
+
+  // ========================================
+  // WILDCARD PERMISSION
+  // ========================================
+
+  if (permissions.includes("*")) {
+    return <Outlet />;
+  }
+
+  // ========================================
+  // PERMISSION CHECK
+  // ========================================
+
+  if (requiredPermission) {
+    if (!permissions.includes(requiredPermission)) {
+      return <Navigate to="/unauthorized" replace />;
+    }
+  }
+
+  // ========================================
+  // OPTIONAL ROLE CHECK
+  // ========================================
+
+  if (allowedRoles?.length) {
+    if (!allowedRoles.includes(roleName)) {
+      return <Navigate to="/unauthorized" replace />;
+    }
   }
 
   return <Outlet />;

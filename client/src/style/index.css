@@ -31,3 +31,6 @@
 
 /* 7. Responsive - ALWAYS LAST */
 @import "./responsive.css";
+@import "./settings.css";
+@import "./permission.css";
+@import "./role.css";

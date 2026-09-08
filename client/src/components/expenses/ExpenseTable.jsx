@@ -40,6 +40,7 @@ function ExpenseTable({
   month,
   search,
   canEdit,
+  canDelete,
   currentPage,
   totalPages,
   totalItems,
@@ -51,6 +52,8 @@ function ExpenseTable({
   onPageChange,
   onItemsPerPageChange,
 }) {
+  const canShowActions = canEdit || canDelete;
+
   return (
     <section className="panel">
       {/* ======================================
@@ -119,7 +122,7 @@ function ExpenseTable({
               "Category",
               "Amount",
               "Notes",
-              ...(canEdit ? ["Actions"] : []),
+              ...(canShowActions ? ["Actions"] : []),
             ]}
             rows={paginatedItems.map((item) => (
               <tr key={item._id}>
@@ -144,31 +147,35 @@ function ExpenseTable({
                 <td>{item.notes || "—"}</td>
 
                 {/* =================================
-                    ACTIONS - ADMIN ONLY
+                    ACTIONS
                 ================================= */}
 
-                {canEdit && (
+                {canShowActions && (
                   <td>
                     <div className="table-actions">
                       {/* EDIT */}
 
-                      <button
-                        type="button"
-                        className="icon-button edit-button"
-                        title="Edit Expense"
-                        onClick={() => onEdit(item)}
-                      >
-                        <Pencil size={16} />
-                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className="icon-button edit-button"
+                          title="Edit Expense"
+                          onClick={() => onEdit(item)}
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      )}
 
                       {/* DELETE */}
 
-                      <DeleteButton
-                        onDelete={() => onDelete(item._id)}
-                        itemName={`${item.category} - ${new Date(
-                          item.date,
-                        ).toLocaleDateString("en-IN")}`}
-                      />
+                      {canDelete && (
+                        <DeleteButton
+                          onDelete={() => onDelete(item._id)}
+                          itemName={`${item.category} - ${new Date(
+                            item.date,
+                          ).toLocaleDateString("en-IN")}`}
+                        />
+                      )}
                     </div>
                   </td>
                 )}

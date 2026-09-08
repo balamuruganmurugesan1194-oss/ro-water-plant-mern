@@ -6,19 +6,7 @@ import { auth } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// ==========================================
-// LOGIN
-// POST /api/auth/login
-// PUBLIC
-// ==========================================
-
 router.post("/login", login);
-
-// ==========================================
-// CURRENT USER
-// GET /api/auth/me
-// PROTECTED
-// ==========================================
 
 router.get("/me", auth, getMe);
 

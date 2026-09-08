@@ -2,14 +2,15 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
-
 import authRoutes from "./routes/authRoutes.js";
 import saleRoutes from "./routes/saleRoutes.js";
 import expenseRoutes from "./routes/expenseRoutes.js";
 import partyRoutes from "./routes/partyRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
-
+import userRoutes from "./routes/userRoutes.js";
+import roleRoutes from "./routes/roleRoutes.js";
+import permissionRoutes from "./routes/permissionRoutes.js";
 const app = express();
 
 // app.use(cors());
@@ -48,6 +49,9 @@ app.use("/api/expenses", expenseRoutes);
 app.use("/api/parties", partyRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/settings/users", userRoutes);
+app.use("/api/settings/roles", roleRoutes);
+app.use("/api/settings/permissions", permissionRoutes);
 const port = process.env.PORT || 5000;
 
 mongoose

@@ -23,14 +23,24 @@ const userSchema = new mongoose.Schema(
     },
 
     role: {
-      type: String,
-      enum: ["admin", "manager", "staff"],
-      default: "staff",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Role",
+      default: null,
     },
 
-    active: {
+    isSuperAdmin: {
+      type: Boolean,
+      default: false,
+    },
+
+    isActive: {
       type: Boolean,
       default: true,
+    },
+
+    isDefault: {
+      type: Boolean,
+      default: false,
     },
   },
   {
@@ -38,6 +48,4 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-const User = mongoose.models.User || mongoose.model("User", userSchema);
-
-export default User;
+export default mongoose.model("User", userSchema);

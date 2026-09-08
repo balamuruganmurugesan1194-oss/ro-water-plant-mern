@@ -39,7 +39,22 @@ export const login = async (req, res) => {
 
     const user = await User.findOne({
       email: normalizedEmail,
-    }).select("+password");
+    })
+      .select("+password")
+      .populate({
+        path: "role",
+        populate: {
+          path: "permissions",
+          match: {
+            isActive: true,
+          },
+          select: "key name module description isActive",
+        },
+      });
+
+    // ======================================
+    // USER NOT FOUND
+    // ======================================
 
     if (!user) {
       return res.status(401).json({
@@ -51,7 +66,7 @@ export const login = async (req, res) => {
     // ACTIVE CHECK
     // ======================================
 
-    if (user.active === false) {
+    if (user.isActive === false) {
       return res.status(403).json({
         message: "Your account has been disabled",
       });
@@ -96,6 +111,27 @@ export const login = async (req, res) => {
     );
 
     // ======================================
+    // PERMISSIONS
+    // ======================================
+
+    const permissions = user.isSuperAdmin
+      ? ["*"]
+      : (user.role?.permissions || []).map((permission) => permission.key);
+
+    // ======================================
+    // ROLE
+    // ======================================
+
+    const role = user.role
+      ? {
+          id: user.role._id.toString(),
+          name: user.role.name,
+          description: user.role.description,
+          isSystemRole: user.role.isSystemRole,
+        }
+      : null;
+
+    // ======================================
     // RESPONSE
     // ======================================
 
@@ -104,10 +140,18 @@ export const login = async (req, res) => {
 
       user: {
         id: user._id.toString(),
+
         name: user.name,
+
         email: user.email,
-        role: user.role,
-        active: user.active,
+
+        isSuperAdmin: user.isSuperAdmin,
+
+        role,
+
+        permissions,
+
+        isActive: user.isActive,
       },
     });
   } catch (error) {

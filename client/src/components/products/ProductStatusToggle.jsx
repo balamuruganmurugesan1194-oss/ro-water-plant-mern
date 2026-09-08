@@ -46,7 +46,7 @@ function ProductStatusToggle({ isActive, onChange, disabled }) {
 
     top: "2px",
 
-    left: isActive ? "17px" : "2px",
+    left: isActive ? "10px" : "2px",
 
     width: "20px",
 

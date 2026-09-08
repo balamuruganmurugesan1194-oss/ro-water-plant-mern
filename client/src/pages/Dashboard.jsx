@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+
 import {
   LineChart,
   Line,
@@ -10,19 +11,64 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+
 import api from "../api/client";
+
 import { money } from "../utils/helpers";
+
 import Stat from "../components/common/Stat";
 import Table from "../components/common/Table";
 import Loading from "../components/common/Loading";
 
+import { useAuth } from "../context/AuthContext";
+
 function Dashboard() {
+  // ==========================================
+  // AUTH
+  // ==========================================
+
+  const { isSuperAdmin, permissions = [] } = useAuth();
+
+  // ==========================================
+  // PERMISSION
+  // ==========================================
+
+  const hasPermission = (permission) => {
+    if (isSuperAdmin === true) {
+      return true;
+    }
+
+    if (permissions.includes("*")) {
+      return true;
+    }
+
+    return permissions.includes(permission);
+  };
+
+  const canView = hasPermission("dashboard.view");
+
+  // ==========================================
+  // STATE
+  // ==========================================
+
   const [data, setData] = useState(null);
-  const [year, setYear] = useState(2026);
+
+  const [year, setYear] = useState(new Date().getFullYear());
+
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState("");
 
+  // ==========================================
+  // LOAD DASHBOARD
+  // ==========================================
+
   const load = async () => {
+    if (!canView) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
@@ -31,7 +77,7 @@ function Dashboard() {
 
       setData(response.data);
     } catch (err) {
-      console.error(err);
+      console.error("DASHBOARD ERROR:", err);
 
       setError(err.response?.data?.message || "Failed to load dashboard");
     } finally {
@@ -39,13 +85,39 @@ function Dashboard() {
     }
   };
 
+  // ==========================================
+  // YEAR CHANGE
+  // ==========================================
+
   useEffect(() => {
     load();
-  }, [year]);
+  }, [year, canView]);
+
+  // ==========================================
+  // NO PERMISSION
+  // ==========================================
+
+  if (!canView) {
+    return (
+      <div className="content">
+        <div className="error">
+          You do not have permission to view the dashboard.
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // LOADING
+  // ==========================================
 
   if (loading) {
     return <Loading />;
   }
+
+  // ==========================================
+  // ERROR
+  // ==========================================
 
   if (error) {
     return (
@@ -55,26 +127,59 @@ function Dashboard() {
     );
   }
 
+  // ==========================================
+  // EMPTY
+  // ==========================================
+
   if (!data) {
     return <Loading />;
   }
 
+  // ==========================================
+  // MONTHLY DATA
+  // ==========================================
+
+  const monthly = Array.isArray(data.monthly) ? data.monthly : [];
+
+  // ==========================================
+  // TOTALS
+  // ==========================================
+
+  const totals = data.totals || {};
+
+  // ==========================================
+  // RENDER
+  // ==========================================
+
   return (
     <div className="content">
+      {/* ====================================
+          YEAR FILTER
+      ==================================== */}
+
       <div className="dashboard-year-filter">
-        <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
+        <select
+          value={year}
+          onChange={(event) => setYear(Number(event.target.value))}
+        >
           <option value={2025}>2025</option>
+
           <option value={2026}>2026</option>
+
           <option value={2027}>2027</option>
         </select>
       </div>
 
+      {/* ====================================
+          STAT CARDS
+      ==================================== */}
+
       <div className="cards">
-        <Stat title="Total Revenue" value={money(data.totals?.revenue)} />
+        <Stat title="Total Revenue" value={money(totals.revenue)} />
 
-        <Stat title="Total Expenses" value={money(data.totals?.expenses)} />
+        <Stat title="Total Expenses" value={money(totals.expenses)} />
 
-        <Stat title="Net Profit" value={money(data.totals?.profit)} />
+        <Stat title="Net Profit" value={money(totals.profit)} />
 
         <Stat
           title="Profit Margin"
@@ -87,12 +192,18 @@ function Dashboard() {
         />
       </div>
 
+      {/* ====================================
+          CHARTS
+      ==================================== */}
+
       <div className="grid2">
+        {/* REVENUE VS EXPENSES */}
+
         <section className="panel">
           <h3>Revenue vs Expenses</h3>
 
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data.monthly || []}>
+            <BarChart data={monthly}>
               <CartesianGrid strokeDasharray="3 3" />
 
               <XAxis dataKey="month" />
@@ -108,11 +219,13 @@ function Dashboard() {
           </ResponsiveContainer>
         </section>
 
+        {/* MONTHLY PROFIT */}
+
         <section className="panel">
           <h3>Monthly Profit</h3>
 
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data.monthly || []}>
+            <LineChart data={monthly}>
               <CartesianGrid strokeDasharray="3 3" />
 
               <XAxis dataKey="month" />
@@ -121,29 +234,41 @@ function Dashboard() {
 
               <Tooltip formatter={(value) => money(value)} />
 
-              <Line type="monotone" dataKey="profit" strokeWidth={3} />
+              <Line
+                type="monotone"
+                dataKey="profit"
+                name="Profit"
+                strokeWidth={3}
+              />
             </LineChart>
           </ResponsiveContainer>
         </section>
       </div>
+
+      {/* ====================================
+          MONTHLY SUMMARY
+      ==================================== */}
 
       <section className="panel">
         <h3>Monthly Summary</h3>
 
         <Table
           headers={["Month", "Revenue", "Expenses", "Profit", "Margin"]}
-          rows={(data.monthly || []).map((m) => (
-            <tr key={m.month}>
-              <td>{m.month}</td>
+          rows={monthly.map((month) => (
+            <tr key={`${year}-${month.monthNumber}`}>
+              <td>{month.month}</td>
 
-              <td>{money(m.revenue)}</td>
+              <td>{money(month.revenue)}</td>
 
-              <td>{money(m.expenses)}</td>
+              <td>{money(month.expenses)}</td>
 
-              <td>{money(m.profit)}</td>
+              <td>{money(month.profit)}</td>
 
               <td>
-                {m.revenue ? ((m.profit / m.revenue) * 100).toFixed(1) : "0.0"}%
+                {month.revenue
+                  ? ((month.profit / month.revenue) * 100).toFixed(1)
+                  : "0.0"}
+                %
               </td>
             </tr>
           ))}

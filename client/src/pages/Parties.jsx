@@ -24,18 +24,30 @@ const initialForm = {
 
 function Parties() {
   // ==========================================
-  // AUTH
+  // AUTH / PERMISSIONS
   // ==========================================
 
-  const { user } = useAuth();
+  const { isSuperAdmin, permissions = [] } = useAuth();
 
-  const role = user?.role?.toLowerCase();
+  const hasPermission = (permission) => {
+    if (isSuperAdmin === true) {
+      return true;
+    }
 
-  const canAdd = role === "admin" || role === "manager";
+    if (permissions.includes("*")) {
+      return true;
+    }
 
-  const canEdit = role === "admin" || role === "manager";
+    return permissions.includes(permission);
+  };
 
-  const canDelete = role === "admin";
+  const canView = hasPermission("parties.view");
+
+  const canAdd = hasPermission("parties.create");
+
+  const canEdit = hasPermission("parties.edit");
+
+  const canDelete = hasPermission("parties.delete");
 
   // ==========================================
   // STATE
@@ -74,6 +86,12 @@ function Parties() {
   // ==========================================
 
   const load = async () => {
+    if (!canView) {
+      setItems([]);
+
+      return;
+    }
+
     try {
       const response = await api.get(`/parties?type=${type}`);
 
@@ -91,15 +109,21 @@ function Parties() {
 
   useEffect(() => {
     setCurrentPage(1);
+
     setSearch("");
 
     setEditing(false);
+
     setEditingId(null);
+
     setForm(initialForm);
+
     setErrors({});
 
-    load();
-  }, [type]);
+    if (canView) {
+      load();
+    }
+  }, [type, canView]);
 
   // ==========================================
   // SEARCH
@@ -140,8 +164,11 @@ function Parties() {
 
   const resetForm = () => {
     setForm(initialForm);
+
     setErrors({});
+
     setEditing(false);
+
     setEditingId(null);
   };
 
@@ -151,12 +178,13 @@ function Parties() {
 
   const handleEdit = (party) => {
     if (!canEdit) {
-      alert("You are not authorized to edit parties.");
+      alert("You do not have permission to edit parties.");
 
       return;
     }
 
     setEditing(true);
+
     setEditingId(party._id);
 
     setForm({
@@ -189,7 +217,7 @@ function Parties() {
 
       if (editing) {
         if (!canEdit) {
-          throw new Error("You are not authorized to edit parties.");
+          throw new Error("You do not have permission to edit parties.");
         }
 
         await api.put(`/parties/${editingId}`, {
@@ -205,6 +233,7 @@ function Parties() {
         resetForm();
 
         setSearch("");
+
         setCurrentPage(1);
 
         await load();
@@ -217,7 +246,7 @@ function Parties() {
       // ========================================
 
       if (!canAdd) {
-        throw new Error("You are not authorized to add parties.");
+        throw new Error("You do not have permission to create parties.");
       }
 
       await api.post("/parties", {
@@ -232,14 +261,19 @@ function Parties() {
         type,
       });
 
-      // Reset form
+      // ========================================
+      // RESET FORM
+      // ========================================
 
       resetForm();
 
       setSearch("");
+
       setCurrentPage(1);
 
-      // Reload
+      // ========================================
+      // RELOAD
+      // ========================================
 
       await load();
     } catch (err) {
@@ -259,7 +293,7 @@ function Parties() {
 
   const handleDelete = async (id) => {
     if (!canDelete) {
-      alert("You are not authorized to delete parties.");
+      alert("You do not have permission to delete parties.");
 
       return;
     }
@@ -293,9 +327,13 @@ function Parties() {
     }
 
     setType(newType);
+
     setSearch("");
+
     setErrors({});
+
     setForm(initialForm);
+
     setCurrentPage(1);
   };
 
@@ -318,8 +356,25 @@ function Parties() {
 
   const handleItemsPerPageChange = (value) => {
     setItemsPerPage(value);
+
     setCurrentPage(1);
   };
+
+  // ==========================================
+  // NO VIEW PERMISSION
+  // ==========================================
+
+  if (!canView) {
+    return (
+      <div className="content">
+        <section className="panel">
+          <div className="empty-state">
+            You do not have permission to view parties.
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   // ==========================================
   // RENDER
@@ -343,6 +398,8 @@ function Parties() {
           onTypeChange={handleTypeChange}
           editing={editing}
           onCancelEdit={resetForm}
+          canCreate={canAdd}
+          canEdit={canEdit}
         />
       ) : null}
 
@@ -358,6 +415,7 @@ function Parties() {
         search={search}
         onSearchChange={(value) => {
           setSearch(value);
+
           setCurrentPage(1);
         }}
         onEdit={handleEdit}

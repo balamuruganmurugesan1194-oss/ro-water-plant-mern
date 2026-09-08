@@ -1,6 +1,7 @@
 import Party from "../models/Party.js";
 import Counter from "../models/Counter.js";
 import { getNextNumber } from "../utils/getNextNumber.js";
+
 // ==========================================
 // GET PARTIES
 // GET /api/parties
@@ -98,27 +99,10 @@ export const createParty = async (req, res) => {
 
     const counterName = `party_${type}`;
 
-    // const counter = await Counter.findOneAndUpdate(
-    //   {
-    //     name: counterName,
-    //   },
-    //   {
-    //     $inc: {
-    //       seq: 1,
-    //     },
-    //   },
-    //   {
-    //     new: true,
-    //     upsert: true,
-    //     setDefaultsOnInsert: true,
-    //   },
-    // );
-
     const prefix = type === "customer" ? "CUS" : "SUP";
 
-    // const generatedCode = `${prefix}${String(counter.seq).padStart(4, "0")}`;
-
     const generatedCode = await getNextNumber(counterName, prefix, 4);
+
     console.log("GENERATED PARTY CODE:", generatedCode);
 
     // ==========================================
@@ -211,6 +195,12 @@ export const deleteParty = async (req, res) => {
     });
   }
 };
+
+// ==========================================
+// GET NEXT PARTY CODE
+// GET /api/parties/next-code
+// ==========================================
+
 export const getNextPartyCode = async (req, res) => {
   try {
     const { type } = req.query;
@@ -242,6 +232,7 @@ export const getNextPartyCode = async (req, res) => {
     });
   }
 };
+
 // ==========================================
 // UPDATE PARTY
 // PUT /api/parties/:id
@@ -267,9 +258,14 @@ export const updateParty = async (req, res) => {
       });
     }
 
-    // Don't allow code/type modification
+    // ==========================================
+    // DON'T ALLOW CODE / TYPE MODIFICATION
+    // ==========================================
+
     party.name = name.trim();
+
     party.contactNumber = contactNumber.trim();
+
     party.address = address?.trim() || "";
 
     await party.save();
