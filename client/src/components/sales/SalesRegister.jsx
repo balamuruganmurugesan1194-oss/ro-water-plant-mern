@@ -19,6 +19,7 @@ function SalesRegister({
   totalItems,
   itemsPerPage,
   canEdit,
+  canDelete,
   onMonthChange,
   onSearchChange,
   onPageChange,
@@ -31,6 +32,7 @@ function SalesRegister({
       key: "saleNumber",
       label: "Sale Number",
     },
+
     {
       key: "date",
       label: "Date",
@@ -68,6 +70,9 @@ function SalesRegister({
       label: "Notes",
     },
   ];
+
+  const showActions = canEdit || canDelete;
+
   return (
     <section className="panel">
       <div className="panel-head">
@@ -86,6 +91,7 @@ function SalesRegister({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
           />
+
           <ExportButtons
             data={allSales}
             columns={salesExportColumns}
@@ -114,11 +120,12 @@ function SalesRegister({
               "Amount",
               "Payment",
               "Status",
-              "Action",
+              ...(showActions ? ["Action"] : []),
             ]}
             rows={sales.map((sale) => (
               <tr key={sale._id}>
                 <td>{sale.saleNumber}</td>
+
                 <td>{new Date(sale.date).toLocaleDateString("en-IN")}</td>
 
                 <td>{sale.type}</td>
@@ -139,16 +146,18 @@ function SalesRegister({
 
                 <td>{sale.paymentStatus}</td>
 
-                <td>
-                  <div className="table-actions">
-                    {canEdit && (
-                      <DeleteButton
-                        onDelete={() => onDelete(sale._id)}
-                        itemName={`${sale.partyName} - ${sale.type}`}
-                      />
-                    )}
-                  </div>
-                </td>
+                {showActions && (
+                  <td>
+                    <div className="table-actions">
+                      {canDelete && (
+                        <DeleteButton
+                          onDelete={() => onDelete(sale._id)}
+                          itemName={`${sale.partyName} - ${sale.type}`}
+                        />
+                      )}
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           />

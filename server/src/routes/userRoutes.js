@@ -8,26 +8,49 @@ import {
   deleteUser,
 } from "../controllers/userController.js";
 
-import { auth, requireRole } from "../middleware/auth.js";
+import { auth, requirePermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
+// ==========================================
+// ALL USER ROUTES REQUIRE LOGIN
+// ==========================================
+
 router.use(auth);
-router.use(requireRole("admin"));
 
-// READ
-router.get("/", getUsers);
+// ==========================================
+// GET USERS
+// users.view
+// ==========================================
 
-// READ SINGLE
-router.get("/:id", getUser);
+router.get("/", requirePermission("users.view"), getUsers);
 
-// CREATE
-router.post("/", createUser);
+// ==========================================
+// GET SINGLE USER
+// users.view
+// ==========================================
 
-// UPDATE
-router.put("/:id", updateUser);
+router.get("/:id", requirePermission("users.view"), getUser);
 
-// DELETE
-router.delete("/:id", deleteUser);
+// ==========================================
+// CREATE USER
+// users.create
+// ==========================================
+
+router.post("/", requirePermission("users.create"), createUser);
+
+// ==========================================
+// UPDATE USER
+// users.edit
+// ==========================================
+
+router.put("/:id", requirePermission("users.edit"), updateUser);
+
+// ==========================================
+// DELETE USER
+// users.delete
+// ==========================================
+
+router.delete("/:id", requirePermission("users.delete"), deleteUser);
 
 export default router;

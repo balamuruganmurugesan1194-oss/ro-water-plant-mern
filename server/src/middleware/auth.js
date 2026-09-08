@@ -1,133 +1,148 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
-// ==========================================
-// AUTHENTICATION
-// ==========================================
-
 export const auth = async (req, res, next) => {
   try {
-    // ======================================
-    // CHECK JWT SECRET
-    // ======================================
+    const authHeader = req.headers.authorization;
 
-    if (!process.env.JWT_SECRET) {
-      console.error("JWT_SECRET is not configured");
-
-      return res.status(500).json({
-        message: "JWT configuration is missing",
-      });
-    }
-
-    // ======================================
-    // GET AUTHORIZATION HEADER
-    // ======================================
-
-    const header = req.headers.authorization || "";
-
-    if (!header.startsWith("Bearer ")) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
-        message: "Authentication required",
+        message: "Not authorized. Token required.",
       });
     }
 
-    // ======================================
-    // GET TOKEN
-    // ======================================
-
-    const token = header.slice(7).trim();
+    const token = authHeader.split(" ")[1];
 
     if (!token) {
       return res.status(401).json({
-        message: "Authentication required",
+        message: "Not authorized. Token required.",
       });
     }
 
-    // ======================================
-    // VERIFY TOKEN
-    // ======================================
-
-    let decoded;
-
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (error) {
-      if (error.name === "TokenExpiredError") {
-        return res.status(401).json({
-          message: "Token expired",
-          code: "TOKEN_EXPIRED",
-        });
-      }
-
-      return res.status(401).json({
-        message: "Invalid token",
-        code: "INVALID_TOKEN",
-      });
-    }
-
-    // ======================================
-    // FIND USER
-    // ======================================
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findById(decoded.id)
-      .select("_id name email role active")
-      .lean();
+      .select("-password")
+      .populate({
+        path: "role",
+        populate: {
+          path: "permissions",
+          match: { isActive: true },
+          select: "key name module description isActive",
+        },
+      });
 
     if (!user) {
       return res.status(401).json({
-        message: "User not found",
+        message: "User not found.",
       });
     }
 
-    // ======================================
-    // CHECK ACTIVE
-    // ======================================
-
-    if (user.active === false) {
+    if (user.isActive === false) {
       return res.status(403).json({
-        message: "Your account has been disabled",
+        message: "Your account has been disabled.",
       });
     }
 
-    // ======================================
-    // ATTACH USER TO REQUEST
-    // ======================================
+    // Administrator / Super Admin gets all permissions
+    const permissions = user.isSuperAdmin
+      ? ["*"]
+      : (user.role?.permissions || []).map((permission) => permission.key);
+
+    const role = user.role
+      ? {
+          id: user.role._id.toString(),
+          name: user.role.name,
+          description: user.role.description,
+          isSystemRole: user.role.isSystemRole,
+        }
+      : null;
 
     req.user = {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
-      role: user.role,
-      active: user.active,
+      isSuperAdmin: user.isSuperAdmin,
+      role,
+      permissions,
+      isActive: user.isActive,
     };
 
     next();
   } catch (error) {
-    console.error("AUTH ERROR:", error);
+    console.error("AUTH MIDDLEWARE ERROR:", error);
 
-    return res.status(500).json({
-      message: "Authentication failed",
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        message: "Token expired.",
+      });
+    }
+
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({
+        message: "Invalid token.",
+      });
+    }
+
+    return res.status(401).json({
+      message: "Authentication failed.",
     });
   }
 };
 
-// ==========================================
-// ROLE AUTHORIZATION
-// ==========================================
-
-export const requireRole = (...roles) => {
+/**
+ * Permission middleware
+ *
+ * Example:
+ * requirePermission("sales.create")
+ */
+export const requirePermission = (permission) => {
   return (req, res, next) => {
-    // User must be authenticated
-    if (!req.user) {
-      return res.status(401).json({
-        message: "Authentication required",
+    // Administrator / Super Admin can do everything
+    if (req.user?.isSuperAdmin === true) {
+      return next();
+    }
+
+    if (!req.user?.permissions?.includes(permission)) {
+      return res.status(403).json({
+        message: "You do not have permission",
+        permission,
       });
     }
 
-    // Check role
-    if (!roles.includes(req.user.role)) {
+    next();
+  };
+};
+
+/**
+ * Optional role middleware
+ *
+ * Use only when a particular API must be restricted
+ * to specific roles.
+ *
+ * Example:
+ * requireRole("Manager", "Admin")
+ */
+export const requireRole = (...allowedRoles) => {
+  return (req, res, next) => {
+    // Super Admin bypass
+    if (req.user?.isSuperAdmin === true) {
+      return next();
+    }
+
+    const userRole = req.user?.role?.name;
+
+    if (!userRole) {
       return res.status(403).json({
-        message: "Insufficient permissions",
+        message: "No role assigned to this user.",
+      });
+    }
+
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({
+        message: "You do not have the required role.",
+        requiredRoles: allowedRoles,
+        currentRole: userRole,
       });
     }
 

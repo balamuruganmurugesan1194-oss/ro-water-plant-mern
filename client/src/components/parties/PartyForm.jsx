@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Pencil, X } from "lucide-react";
+
 import api from "../../api/client";
 
 // ==========================================
@@ -17,6 +18,8 @@ function PartyForm({
   onTypeChange,
   editing,
   onCancelEdit,
+  canCreate = false,
+  canEdit = false,
 }) {
   const [loadingCode, setLoadingCode] = useState(false);
 
@@ -52,10 +55,10 @@ function PartyForm({
   // ==========================================
 
   useEffect(() => {
-    if (type && !editing) {
+    if (type && !editing && canCreate) {
       getNextPartyCode(type);
     }
-  }, [type, editing]);
+  }, [type, editing, canCreate]);
 
   // ==========================================
   // HANDLE CHANGE
@@ -115,6 +118,26 @@ function PartyForm({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ========================================
+    // PERMISSION CHECK
+    // ========================================
+
+    if (editing && !canEdit) {
+      alert("You do not have permission to edit parties.");
+
+      return;
+    }
+
+    if (!editing && !canCreate) {
+      alert("You do not have permission to create parties.");
+
+      return;
+    }
+
+    // ========================================
+    // VALIDATION
+    // ========================================
 
     if (!validate()) {
       return;
@@ -229,7 +252,11 @@ function PartyForm({
             <>
               {/* UPDATE */}
 
-              <button className="primary" type="submit" disabled={saving}>
+              <button
+                className="primary"
+                type="submit"
+                disabled={saving || !canEdit}
+              >
                 <Pencil size={18} />
 
                 {saving ? "Updating..." : "Update"}
@@ -251,7 +278,7 @@ function PartyForm({
             <button
               className="primary"
               type="submit"
-              disabled={saving || loadingCode}
+              disabled={saving || loadingCode || !canCreate}
             >
               <Plus size={18} />
 

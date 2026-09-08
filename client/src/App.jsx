@@ -31,10 +31,7 @@ function App() {
   return (
     <AuthProvider>
       <Routes>
-        {/* =================================================
-            PUBLIC ROUTES
-        ================================================= */}
-
+        {/* PUBLIC */}
         <Route path="/login" element={<Login />} />
 
         <Route path="/unauthorized" element={<Unauthorized />} />
@@ -42,39 +39,30 @@ function App() {
         <Route path="/not-found" element={<NotFound />} />
 
         {/* =================================================
-            ADMIN + STAFF
+            PROTECTED APPLICATION
         ================================================= */}
 
-        <Route element={<ProtectedRoute allowedRoles={["admin", "staff"]} />}>
+        <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
-            <Route path="/products" element={<Products />} />
-
-            <Route path="/sales" element={<Sales />} />
-
-            <Route path="/parties" element={<Parties />} />
-          </Route>
-        </Route>
-
-        {/* =================================================
-            ADMIN ONLY
-        ================================================= */}
-
-        <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-          <Route element={<MainLayout />}>
-            {/* Dashboard */}
-
+            {/* DASHBOARD */}
             <Route path="/dashboard" element={<Dashboard />} />
 
-            {/* Expenses */}
+            {/* PRODUCTS */}
+            <Route path="/products" element={<Products />} />
 
+            {/* SALES */}
+            <Route path="/sales" element={<Sales />} />
+
+            {/* EXPENSES */}
             <Route path="/expenses" element={<Expenses />} />
 
-            {/* =================================================
-                SETTINGS
-            ================================================= */}
+            {/* PARTIES */}
+            <Route path="/parties" element={<Parties />} />
 
+            {/* USERS */}
             <Route path="/settings/users" element={<Users />} />
 
+            {/* ROLES */}
             <Route
               path="/settings/roles-permissions"
               element={<RolesPermissions />}
@@ -82,16 +70,10 @@ function App() {
           </Route>
         </Route>
 
-        {/* =================================================
-            ROOT
-        ================================================= */}
-
+        {/* ROOT */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-        {/* =================================================
-            404
-        ================================================= */}
-
+        {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AuthProvider>

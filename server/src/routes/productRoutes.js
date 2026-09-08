@@ -10,21 +10,44 @@ import {
   getNextProductCode,
 } from "../controllers/productController.js";
 
+import { auth, requirePermission } from "../middleware/auth.js";
+
 const router = express.Router();
 
-router.get("/next-code", getNextProductCode);
+/*
+|--------------------------------------------------------------------------
+| IMPORTANT
+| /next-code must come BEFORE /:id
+|--------------------------------------------------------------------------
+*/
 
-router.get("/", getProducts);
+router.get(
+  "/next-code",
+  auth,
+  requirePermission("products.view"),
+  getNextProductCode,
+);
 
-router.get("/:id", getProduct);
+router.get("/", auth, requirePermission("products.view"), getProducts);
 
-router.post("/", createProduct);
+router.get("/:id", auth, requirePermission("products.view"), getProduct);
 
-router.put("/:id", updateProduct);
+router.post("/", auth, requirePermission("products.create"), createProduct);
 
-router.delete("/:id", deleteProduct);
+router.put("/:id", auth, requirePermission("products.edit"), updateProduct);
 
-router.patch("/:id/status", toggleProductStatus);
+router.patch(
+  "/:id/status",
+  auth,
+  requirePermission("products.edit"),
+  toggleProductStatus,
+);
 
+router.delete(
+  "/:id",
+  auth,
+  requirePermission("products.delete"),
+  deleteProduct,
+);
 
 export default router;

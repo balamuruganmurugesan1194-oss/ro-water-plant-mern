@@ -22,6 +22,7 @@ function SalesForm({
   customers = [],
   suppliers = [],
   saleNumber = "",
+  canCreate = false,
 }) {
   // ==========================================
   // HANDLE FIELD CHANGE
@@ -238,11 +239,17 @@ function SalesForm({
   const submit = (e) => {
     e.preventDefault();
 
+    if (!canCreate) {
+      alert("You do not have permission to create sales.");
+
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
 
-    // Do not send saleNumber from frontend.
+    // Do not send saleNumber.
     // Backend generates it using Counter.
 
     onSave(form);
@@ -280,24 +287,7 @@ function SalesForm({
       ====================================== */}
 
       <form className="form-grid" onSubmit={submit} noValidate>
-        {/* ====================================
-            SALE NUMBER
-        ==================================== */}
-
-        {/* <label>
-          Sale No.
-          <input
-            type="text"
-            value={saleNumber || ""}
-            readOnly
-            placeholder="Generating..."
-            className="readonly-input"
-          />
-        </label> */}
-
-        {/* ====================================
-            DATE
-        ==================================== */}
+        {/* DATE */}
 
         <label>
           Date
@@ -310,9 +300,7 @@ function SalesForm({
           {errors.date && <small className="error-text">{errors.date}</small>}
         </label>
 
-        {/* ====================================
-            PARTY
-        ==================================== */}
+        {/* PARTY */}
 
         <div className="form-field">
           <label>{partyLabel}</label>
@@ -340,9 +328,7 @@ function SalesForm({
           )}
         </div>
 
-        {/* ====================================
-            PAYMENT MODE
-        ==================================== */}
+        {/* PAYMENT MODE */}
 
         <div className="form-field">
           <label>Payment Mode</label>
@@ -360,9 +346,7 @@ function SalesForm({
           )}
         </div>
 
-        {/* ====================================
-            PAYMENT STATUS
-        ==================================== */}
+        {/* PAYMENT STATUS */}
 
         <div className="form-field">
           <label>Status</label>
@@ -380,9 +364,7 @@ function SalesForm({
           )}
         </div>
 
-        {/* ====================================
-            PRODUCTS
-        ==================================== */}
+        {/* PRODUCTS */}
 
         <SaleItems
           form={form}
@@ -393,17 +375,13 @@ function SalesForm({
           productsLoading={productsLoading}
         />
 
-        {/* ====================================
-            ITEMS ERROR
-        ==================================== */}
+        {/* ITEMS ERROR */}
 
         {errors.items && (
           <small className="error-text sale-items-error">{errors.items}</small>
         )}
 
-        {/* ====================================
-            NOTES
-        ==================================== */}
+        {/* NOTES */}
 
         <div className="form-field sale-notes">
           <label>Notes</label>
@@ -416,9 +394,7 @@ function SalesForm({
           />
         </div>
 
-        {/* ====================================
-            FOOTER
-        ==================================== */}
+        {/* FOOTER */}
 
         <div className="sale-footer">
           <div className="sale-total">
@@ -428,7 +404,11 @@ function SalesForm({
           </div>
 
           <div className="form-actions">
-            <button className="primary" type="submit" disabled={saving}>
+            <button
+              className="primary"
+              type="submit"
+              disabled={saving || !canCreate}
+            >
               <Plus size={18} />
 
               {saving ? "Saving..." : "Save Sale"}

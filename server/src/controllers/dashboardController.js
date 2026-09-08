@@ -4,26 +4,31 @@ import Expense from "../models/Expense.js";
 // ==========================================
 // GET DASHBOARD
 // GET /api/dashboard?year=2026
+// Permission: dashboard.view
 // ==========================================
 
 export const getDashboard = async (req, res) => {
   try {
-    const year = Number(
-      req.query.year ||
-        new Date().getFullYear()
-    );
+    // ======================================
+    // YEAR
+    // ======================================
 
-    const start = new Date(
-      year,
-      0,
-      1
-    );
+    const requestedYear = Number(req.query.year || new Date().getFullYear());
 
-    const end = new Date(
-      year + 1,
-      0,
-      1
-    );
+    const year =
+      Number.isInteger(requestedYear) &&
+      requestedYear >= 2000 &&
+      requestedYear <= 2100
+        ? requestedYear
+        : new Date().getFullYear();
+
+    // ======================================
+    // DATE RANGE
+    // ======================================
+
+    const start = new Date(year, 0, 1);
+
+    const end = new Date(year + 1, 0, 1);
 
     // ======================================
     // GET SALES
@@ -40,74 +45,68 @@ export const getDashboard = async (req, res) => {
     // GET EXPENSES
     // ======================================
 
-    const expenses =
-      await Expense.find({
-        date: {
-          $gte: start,
-          $lt: end,
-        },
-      }).lean();
+    const expenses = await Expense.find({
+      date: {
+        $gte: start,
+        $lt: end,
+      },
+    }).lean();
 
     // ======================================
     // MONTHLY DATA
     // ======================================
 
-    const monthly = Array.from(
-      { length: 12 },
-      (_, i) => ({
-        month: new Date(
-          year,
-          i,
-          1
-        ).toLocaleString(
-          "en-IN",
-          {
-            month: "short",
-          }
-        ),
+    const monthly = Array.from({ length: 12 }, (_, index) => ({
+      month: new Date(year, index, 1).toLocaleString("en-IN", {
+        month: "short",
+      }),
 
-        revenue: 0,
+      monthNumber: index + 1,
 
-        retail: 0,
+      revenue: 0,
 
-        supplier: 0,
+      retail: 0,
 
-        other: 0,
+      supplier: 0,
 
-        expenses: 0,
+      other: 0,
 
-        profit: 0,
-      })
-    );
+      expenses: 0,
+
+      profit: 0,
+
+      margin: 0,
+    }));
 
     // ======================================
     // PROCESS SALES
     // ======================================
 
     for (const sale of sales) {
-      const date = new Date(
-        sale.date
-      );
+      if (!sale.date) {
+        continue;
+      }
 
-      const monthIndex =
-        date.getMonth();
+      const date = new Date(sale.date);
 
-      const amount =
-        Number(sale.amount) || 0;
+      const monthIndex = date.getMonth();
 
-      monthly[
-        monthIndex
-      ].revenue += amount;
+      if (monthIndex < 0 || monthIndex > 11) {
+        continue;
+      }
 
-      // Avoid undefined property
-      if (
-        ["retail", "supplier", "other"].includes(
-          sale.type
-        )
-      ) {
-        monthly[
-          monthIndex
-        ][sale.type] += amount;
+      const amount = Number(sale.amount) || 0;
+
+      monthly[monthIndex].revenue += amount;
+
+      // ====================================
+      // SALE TYPE
+      // ====================================
+
+      const saleType = String(sale.type || "").toLowerCase();
+
+      if (["retail", "supplier", "other"].includes(saleType)) {
+        monthly[monthIndex][saleType] += amount;
       }
     }
 
@@ -116,27 +115,30 @@ export const getDashboard = async (req, res) => {
     // ======================================
 
     for (const expense of expenses) {
-      const date = new Date(
-        expense.date
-      );
+      if (!expense.date) {
+        continue;
+      }
 
-      const monthIndex =
-        date.getMonth();
+      const date = new Date(expense.date);
 
-      monthly[
-        monthIndex
-      ].expenses +=
-        Number(expense.amount) || 0;
+      const monthIndex = date.getMonth();
+
+      if (monthIndex < 0 || monthIndex > 11) {
+        continue;
+      }
+
+      monthly[monthIndex].expenses += Number(expense.amount) || 0;
     }
 
     // ======================================
-    // CALCULATE PROFIT
+    // CALCULATE MONTHLY PROFIT
     // ======================================
 
     for (const month of monthly) {
-      month.profit =
-        month.revenue -
-        month.expenses;
+      month.profit = month.revenue - month.expenses;
+
+      month.margin =
+        month.revenue > 0 ? (month.profit / month.revenue) * 100 : 0;
     }
 
     // ======================================
@@ -144,80 +146,72 @@ export const getDashboard = async (req, res) => {
     // ======================================
 
     const totals = monthly.reduce(
-      (acc, month) => ({
-        revenue:
-          acc.revenue +
-          month.revenue,
+      (accumulator, month) => {
+        accumulator.revenue += month.revenue;
 
-        expenses:
-          acc.expenses +
-          month.expenses,
+        accumulator.expenses += month.expenses;
 
-        profit:
-          acc.profit +
-          month.profit,
-      }),
+        accumulator.profit += month.profit;
+
+        return accumulator;
+      },
       {
         revenue: 0,
         expenses: 0,
         profit: 0,
-      }
+      },
     );
 
     // ======================================
     // PENDING RECEIVABLES
     // ======================================
 
-    const pendingReceivables =
-      sales
-        .filter(
-          (sale) =>
-            sale.paymentStatus !==
-            "Paid"
-        )
-        .reduce(
-          (total, sale) =>
-            total +
-            (Number(
-              sale.amount
-            ) || 0),
-          0
-        );
+    const pendingReceivables = sales
+      .filter((sale) => {
+        const status = String(sale.paymentStatus || "").toLowerCase();
+
+        return status !== "paid";
+      })
+      .reduce((total, sale) => {
+        return total + (Number(sale.amount) || 0);
+      }, 0);
 
     // ======================================
     // PROFIT MARGIN
     // ======================================
 
     const margin =
-      totals.revenue > 0
-        ? (totals.profit /
-            totals.revenue) *
-          100
-        : 0;
+      totals.revenue > 0 ? (totals.profit / totals.revenue) * 100 : 0;
 
     // ======================================
     // RESPONSE
     // ======================================
 
-    res.status(200).json({
+    return res.status(200).json({
+      success: true,
+
       year,
 
+      totals: {
+        revenue: Number(totals.revenue.toFixed(2)),
+
+        expenses: Number(totals.expenses.toFixed(2)),
+
+        profit: Number(totals.profit.toFixed(2)),
+      },
+
+      margin: Number(margin.toFixed(2)),
+
+      pendingReceivables: Number(pendingReceivables.toFixed(2)),
+
       monthly,
-
-      totals,
-
-      margin,
-
-      pendingReceivables,
     });
   } catch (error) {
-    console.error(
-      "GET DASHBOARD ERROR:",
-      error
-    );
+    console.error("GET DASHBOARD ERROR:", error);
 
-    res.status(500).json({
-      message: error.message,
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to load dashboard",
     });
   }
 };

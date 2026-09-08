@@ -13,8 +13,16 @@ function ExpenseForm({
   expenseNumber = "",
   editingId,
   onCancel,
+  canCreate = false,
+  canEdit = false,
 }) {
   const isEditing = Boolean(editingId);
+
+  // ==========================================
+  // PERMISSION
+  // ==========================================
+
+  const canSubmit = isEditing ? canEdit : canCreate;
 
   return (
     <section className="panel">
@@ -32,6 +40,17 @@ function ExpenseForm({
         className="form-grid"
         onSubmit={(e) => {
           e.preventDefault();
+
+          if (!canSubmit) {
+            alert(
+              isEditing
+                ? "You do not have permission to edit expenses."
+                : "You do not have permission to create expenses.",
+            );
+
+            return;
+          }
+
           onSubmit();
         }}
       >
@@ -111,11 +130,13 @@ function ExpenseForm({
 
           {isEditing ? (
             <>
-              <button className="primary" type="submit" disabled={saving}>
-                <Save size={18} />
+              {canEdit && (
+                <button className="primary" type="submit" disabled={saving}>
+                  <Save size={18} />
 
-                {saving ? "Updating..." : "Update Expense"}
-              </button>
+                  {saving ? "Updating..." : "Update Expense"}
+                </button>
+              )}
 
               <button
                 type="button"
@@ -130,11 +151,13 @@ function ExpenseForm({
           ) : (
             /* CREATE */
 
-            <button className="primary" type="submit" disabled={saving}>
-              <Plus size={18} />
+            canCreate && (
+              <button className="primary" type="submit" disabled={saving}>
+                <Plus size={18} />
 
-              {saving ? "Saving..." : "Save Expense"}
-            </button>
+                {saving ? "Saving..." : "Save Expense"}
+              </button>
+            )
           )}
         </div>
       </form>

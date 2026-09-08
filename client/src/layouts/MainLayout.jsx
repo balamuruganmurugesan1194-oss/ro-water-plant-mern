@@ -21,40 +21,44 @@ import {
 
 import { useAuth } from "../context/AuthContext";
 
+// ======================================================
+// NORMAL NAVIGATION
+// ======================================================
+
 const NAV_ITEMS = [
   {
     to: "/dashboard",
     label: "Dashboard",
     icon: LayoutDashboard,
-    roles: ["admin"],
+    permission: "dashboard.view",
   },
 
   {
     to: "/products",
     label: "Products",
     icon: Package,
-    roles: ["admin", "staff"],
+    permission: "products.view",
   },
 
   {
     to: "/parties",
     label: "Customers & Suppliers",
     icon: Users,
-    roles: ["admin", "staff"],
+    permission: "parties.view",
   },
 
   {
     to: "/sales",
     label: "Sales",
     icon: ShoppingCart,
-    roles: ["admin", "staff"],
+    permission: "sales.view",
   },
 
   {
     to: "/expenses",
     label: "Expenses",
     icon: Receipt,
-    roles: ["admin"],
+    permission: "expenses.view",
   },
 ];
 
@@ -63,57 +67,65 @@ const NAV_ITEMS = [
 // ======================================================
 
 const SETTINGS_ITEMS = [
-  {
-    to: "/settings/categories",
-    label: "Categories",
-    icon: Tags,
-  },
+  // {
+  //   to: "/settings/categories",
+  //   label: "Categories",
+  //   icon: Tags,
+  //   permission: "settings.view",
+  // },
 
-  {
-    to: "/settings/units",
-    label: "Units",
-    icon: Ruler,
-  },
+  // {
+  //   to: "/settings/units",
+  //   label: "Units",
+  //   icon: Ruler,
+  //   permission: "settings.view",
+  // },
 
-  {
-    to: "/settings/payment-modes",
-    label: "Payment Modes",
-    icon: CreditCard,
-  },
+  // {
+  //   to: "/settings/payment-modes",
+  //   label: "Payment Modes",
+  //   icon: CreditCard,
+  //   permission: "settings.view",
+  // },
 
   {
     to: "/settings/users",
     label: "Users",
     icon: Users,
+    permission: "users.view",
   },
 
   {
     to: "/settings/roles-permissions",
     label: "Roles & Permissions",
     icon: ShieldCheck,
+    permission: "roles.view",
   },
 
-  {
-    to: "/settings/company-profile",
-    label: "Company Profile",
-    icon: Building2,
-  },
+  // {
+  //   to: "/settings/company-profile",
+  //   label: "Company Profile",
+  //   icon: Building2,
+  //   permission: "settings.view",
+  // },
 
-  {
-    to: "/settings/invoice-settings",
-    label: "Invoice Settings",
-    icon: FileText,
-  },
+  // {
+  //   to: "/settings/invoice-settings",
+  //   label: "Invoice Settings",
+  //   icon: FileText,
+  //   permission: "settings.view",
+  // },
 
-  {
-    to: "/settings/general-settings",
-    label: "General Settings",
-    icon: Settings,
-  },
+  // {
+  //   to: "/settings/general-settings",
+  //   label: "General Settings",
+  //   icon: Settings,
+  //   permission: "settings.view",
+  // },
 ];
 
 function MainLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, isSuperAdmin, permissions = [] } = useAuth();
 
   const location = useLocation();
 
@@ -125,19 +137,45 @@ function MainLayout() {
     location.pathname.startsWith("/settings"),
   );
 
-  const role = user?.role?.toLowerCase();
+  // ======================================================
+  // PERMISSION CHECK
+  // ======================================================
+
+  const hasPermission = (permission) => {
+    // Administrator
+    if (isSuperAdmin === true) {
+      return true;
+    }
+
+    // Wildcard permission
+    if (permissions.includes("*")) {
+      return true;
+    }
+
+    // Normal role permission
+    return permissions.includes(permission);
+  };
 
   // ======================================================
   // NORMAL NAVIGATION
   // ======================================================
 
-  const visibleNavItems = NAV_ITEMS.filter((item) => item.roles.includes(role));
+  const visibleNavItems = NAV_ITEMS.filter((item) =>
+    hasPermission(item.permission),
+  );
 
   // ======================================================
-  // SETTINGS ACCESS
+  // SETTINGS
   // ======================================================
 
-  const canAccessSettings = role === "admin";
+  const visibleSettingsItems = SETTINGS_ITEMS.filter((item) =>
+    hasPermission(item.permission),
+  );
+
+  const canAccessSettings =
+    isSuperAdmin === true ||
+    permissions.includes("*") ||
+    visibleSettingsItems.length > 0;
 
   // ======================================================
   // CURRENT PAGE LABEL
@@ -155,6 +193,14 @@ function MainLayout() {
     currentSettingsItem?.label ||
     currentNavItem?.label ||
     (location.pathname === "/settings" ? "Settings" : "Dashboard");
+
+  // ======================================================
+  // DISPLAY ROLE
+  // ======================================================
+
+  const displayRole = isSuperAdmin
+    ? "Administrator"
+    : user?.role?.name || user?.role || "Staff";
 
   return (
     <div className="app">
@@ -176,7 +222,7 @@ function MainLayout() {
         <div className="userbox">
           <b>{user?.name || "User"}</b>
 
-          <small>{user?.role || "Staff"}</small>
+          <small>{displayRole}</small>
         </div>
 
         {/* =================================================
@@ -229,123 +275,19 @@ function MainLayout() {
 
               {settingsOpen && (
                 <div className="settings-submenu">
-                  {/* MAIN SETTINGS */}
+                  {visibleSettingsItems.map(({ to, label, icon: Icon }) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      className={({ isActive }) =>
+                        isActive ? "settings-subnav active" : "settings-subnav"
+                      }
+                    >
+                      <Icon size={19} />
 
-                  {/* <NavLink
-                    to="/settings"
-                    end
-                    className={({ isActive }) =>
-                      isActive ? "settings-subnav active" : "settings-subnav"
-                    }
-                  >
-                    <Settings size={16} />
-
-                    <span>Settings Home</span>
-                  </NavLink> */}
-
-                  {/* CATEGORY */}
-
-                  {/* <NavLink
-                    to="/settings/categories"
-                    className={({ isActive }) =>
-                      isActive ? "settings-subnav active" : "settings-subnav"
-                    }
-                  >
-                    <Tags size={16} />
-
-                    <span>Categories</span>
-                  </NavLink> */}
-
-                  {/* UNITS */}
-
-                  {/* <NavLink
-                    to="/settings/units"
-                    className={({ isActive }) =>
-                      isActive ? "settings-subnav active" : "settings-subnav"
-                    }
-                  >
-                    <Ruler size={16} />
-
-                    <span>Units</span>
-                  </NavLink> */}
-
-                  {/* PAYMENT MODES */}
-
-                  {/* <NavLink
-                    to="/settings/payment-modes"
-                    className={({ isActive }) =>
-                      isActive ? "settings-subnav active" : "settings-subnav"
-                    }
-                  >
-                    <CreditCard size={16} />
-
-                    <span>Payment Modes</span>
-                  </NavLink> */}
-
-                  {/* USERS */}
-
-                  <NavLink
-                    to="/settings/users"
-                    className={({ isActive }) =>
-                      isActive ? "settings-subnav active" : "settings-subnav"
-                    }
-                  >
-                    <Users size={19} />
-
-                    <span>Users</span>
-                  </NavLink>
-
-                  {/* ROLES */}
-
-                  <NavLink
-                    to="/settings/roles-permissions"
-                    className={({ isActive }) =>
-                      isActive ? "settings-subnav active" : "settings-subnav"
-                    }
-                  >
-                    <ShieldCheck size={19} />
-
-                    <span>Roles & Permissions</span>
-                  </NavLink>
-
-                  {/* COMPANY */}
-
-                  {/* <NavLink
-                    to="/settings/company-profile"
-                    className={({ isActive }) =>
-                      isActive ? "settings-subnav active" : "settings-subnav"
-                    }
-                  >
-                    <Building2 size={16} />
-
-                    <span>Company Profile</span>
-                  </NavLink> */}
-
-                  {/* INVOICE */}
-
-                  {/* <NavLink
-                    to="/settings/invoice-settings"
-                    className={({ isActive }) =>
-                      isActive ? "settings-subnav active" : "settings-subnav"
-                    }
-                  >
-                    <FileText size={16} />
-
-                    <span>Invoice Settings</span>
-                  </NavLink> */}
-
-                  {/* GENERAL */}
-
-                  {/* <NavLink
-                    to="/settings/general-settings"
-                    className={({ isActive }) =>
-                      isActive ? "settings-subnav active" : "settings-subnav"
-                    }
-                  >
-                    <Settings size={16} />
-
-                    <span>General Settings</span>
-                  </NavLink> */}
+                      <span>{label}</span>
+                    </NavLink>
+                  ))}
                 </div>
               )}
             </div>
@@ -377,7 +319,7 @@ function MainLayout() {
             <p>2026 RO Water Plant Management</p>
           </div>
 
-          <span className="role">{user?.role?.toUpperCase()}</span>
+          <span className="role">{displayRole.toUpperCase()}</span>
         </header>
 
         {/* PAGE CONTENT */}

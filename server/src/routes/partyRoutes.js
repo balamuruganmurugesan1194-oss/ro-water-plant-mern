@@ -8,7 +8,7 @@ import {
   getNextPartyCode,
 } from "../controllers/partyController.js";
 
-import { auth } from "../middleware/auth.js";
+import { auth, requirePermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -17,31 +17,35 @@ const router = express.Router();
 // ==========================================
 
 router.use(auth);
-router.get("/next-code", getNextPartyCode);
+
 // ==========================================
-// GET PARTIES
-// GET /api/parties
+// GET NEXT PARTY CODE
 // ==========================================
 
-router.get("/", getParties);
+router.get("/next-code", requirePermission("parties.create"), getNextPartyCode);
+
+// ==========================================
+// GET PARTIES
+// ==========================================
+
+router.get("/", requirePermission("parties.view"), getParties);
 
 // ==========================================
 // CREATE PARTY
-// POST /api/parties
 // ==========================================
 
-router.post("/", createParty);
+router.post("/", requirePermission("parties.create"), createParty);
+
 // ==========================================
-// UPDATE
-// ADMIN + MANAGER
+// UPDATE PARTY
 // ==========================================
 
-router.put("/:id", updateParty);
+router.put("/:id", requirePermission("parties.edit"), updateParty);
+
 // ==========================================
 // DELETE PARTY
-// DELETE /api/parties/:id
 // ==========================================
 
-router.delete("/:id", deleteParty);
+router.delete("/:id", requirePermission("parties.delete"), deleteParty);
 
 export default router;

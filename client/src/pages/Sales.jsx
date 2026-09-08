@@ -9,9 +9,31 @@ import SalesRegister from "../components/sales/SalesRegister";
 import SaleDetailsModal from "../components/sales/SaleDetailsModal";
 
 function Sales() {
-  const { role } = useAuth();
+  // ==========================================
+  // AUTH / PERMISSIONS
+  // ==========================================
 
-  const canEdit = role === "admin";
+  const { isSuperAdmin, permissions = [] } = useAuth();
+
+  const hasPermission = (permission) => {
+    if (isSuperAdmin === true) {
+      return true;
+    }
+
+    if (permissions.includes("*")) {
+      return true;
+    }
+
+    return permissions.includes(permission);
+  };
+
+  const canView = hasPermission("sales.view");
+
+  const canCreate = hasPermission("sales.create");
+
+  const canEdit = hasPermission("sales.edit");
+
+  const canDelete = hasPermission("sales.delete");
 
   // ==========================================
   // STATE
@@ -86,6 +108,11 @@ function Sales() {
   // ==========================================
 
   const loadNextSaleNumber = async () => {
+    if (!canCreate) {
+      setSaleNumber("");
+      return;
+    }
+
     try {
       const response = await api.get("/sales/next-number");
 
@@ -104,6 +131,12 @@ function Sales() {
   // ==========================================
 
   const loadParties = async () => {
+    if (!canCreate) {
+      setCustomers([]);
+      setSuppliers([]);
+      return;
+    }
+
     try {
       const response = await api.get("/parties");
 
@@ -130,6 +163,11 @@ function Sales() {
   // ==========================================
 
   const loadProducts = async () => {
+    if (!canCreate) {
+      setProducts([]);
+      return;
+    }
+
     try {
       setProductsLoading(true);
 
@@ -150,6 +188,11 @@ function Sales() {
   // ==========================================
 
   const loadSales = async (searchValue = search) => {
+    if (!canView) {
+      setSales([]);
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -174,29 +217,44 @@ function Sales() {
   // ==========================================
 
   useEffect(() => {
-    loadProducts();
+    if (!canView) {
+      return;
+    }
 
-    loadParties();
+    loadSales(search);
 
-    // Load automatic sale number
-    loadNextSaleNumber();
-  }, []);
+    if (canCreate) {
+      loadProducts();
+
+      loadParties();
+
+      loadNextSaleNumber();
+    }
+  }, [canView, canCreate]);
 
   // ==========================================
   // MONTH / TYPE CHANGE
   // ==========================================
 
   useEffect(() => {
+    if (!canView) {
+      return;
+    }
+
     setCurrentPage(1);
 
     loadSales(search);
-  }, [month, type]);
+  }, [month, type, canView]);
 
   // ==========================================
   // SEARCH
   // ==========================================
 
   useEffect(() => {
+    if (!canView) {
+      return;
+    }
+
     const now = Date.now();
 
     const elapsed = now - lastSearchTimeRef.current;
@@ -214,7 +272,7 @@ function Sales() {
     }, delay);
 
     return () => clearTimeout(throttleTimeoutRef.current);
-  }, [search]);
+  }, [search, canView]);
 
   // ==========================================
   // TYPE CHANGE
@@ -229,7 +287,7 @@ function Sales() {
 
     setForm(createBlankForm());
 
-    // Keep the current counter preview.
+    // Keep current counter preview.
     // Sale number is independent of type.
   };
 
@@ -238,6 +296,12 @@ function Sales() {
   // ==========================================
 
   const handleSaveSale = async (saleForm) => {
+    if (!canCreate) {
+      alert("You do not have permission to create sales.");
+
+      return;
+    }
+
     try {
       setSaving(true);
 
@@ -305,18 +369,8 @@ function Sales() {
       };
 
       // ========================================
-      // IMPORTANT
-      // ========================================
-      //
-      // DO NOT SEND saleNumber HERE.
-      //
-      // Backend generates:
-      //
-      // SAL-000001
-      // SAL-000002
-      // SAL-000003
-      //
-      // using Counter.
+      // DO NOT SEND SALE NUMBER
+      // BACKEND GENERATES IT
       // ========================================
 
       const response = await api.post("/sales", payload);
@@ -358,6 +412,12 @@ function Sales() {
   // ==========================================
 
   const handleDelete = async (id) => {
+    if (!canDelete) {
+      alert("You do not have permission to delete sales.");
+
+      return;
+    }
+
     try {
       await api.delete(`/sales/${id}`);
 
@@ -393,6 +453,22 @@ function Sales() {
   const paginatedSales = sales.slice(startIndex, startIndex + itemsPerPage);
 
   // ==========================================
+  // NO VIEW PERMISSION
+  // ==========================================
+
+  if (!canView) {
+    return (
+      <div className="content">
+        <section className="panel">
+          <div className="empty-state">
+            You do not have permission to view sales.
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  // ==========================================
   // RENDER
   // ==========================================
 
@@ -402,25 +478,24 @@ function Sales() {
           SALES FORM
       ====================================== */}
 
-      <SalesForm
-        type={type}
-        onTypeChange={handleTypeChange}
-        form={form}
-        setForm={setForm}
-        errors={errors}
-        setErrors={setErrors}
-        products={products}
-        productsLoading={productsLoading}
-        saving={saving}
-        onSave={handleSaveSale}
-        customers={customers}
-        suppliers={suppliers}
-        // ====================================
-        // AUTOMATIC SALE NUMBER
-        // ====================================
-
-        saleNumber={saleNumber}
-      />
+      {canCreate && (
+        <SalesForm
+          type={type}
+          onTypeChange={handleTypeChange}
+          form={form}
+          setForm={setForm}
+          errors={errors}
+          setErrors={setErrors}
+          products={products}
+          productsLoading={productsLoading}
+          saving={saving}
+          onSave={handleSaveSale}
+          customers={customers}
+          suppliers={suppliers}
+          saleNumber={saleNumber}
+          canCreate={canCreate}
+        />
+      )}
 
       {/* ======================================
           SALES REGISTER
@@ -438,6 +513,7 @@ function Sales() {
         totalItems={sales.length}
         itemsPerPage={itemsPerPage}
         canEdit={canEdit}
+        canDelete={canDelete}
         onMonthChange={setMonth}
         onSearchChange={setSearch}
         onPageChange={setCurrentPage}

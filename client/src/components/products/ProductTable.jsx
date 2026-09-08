@@ -20,7 +20,14 @@ function ProductTable({
   loading,
   search,
   onSearchChange,
+
+  // ========================================
+  // PERMISSIONS
+  // ========================================
+
   canEdit,
+  canDelete,
+
   togglingId,
   onEdit,
   onDelete,
@@ -39,7 +46,9 @@ function ProductTable({
   const filteredProducts = products.filter((product) => {
     const searchText = search.trim().toLowerCase();
 
-    if (!searchText) return true;
+    if (!searchText) {
+      return true;
+    }
 
     return (
       product.name?.toLowerCase().includes(searchText) ||
@@ -136,12 +145,20 @@ function ProductTable({
               <thead>
                 <tr>
                   <th>Code</th>
+
                   <th>Product</th>
+
                   <th>Category</th>
+
                   <th>Unit</th>
+
                   <th>Rate</th>
 
-                  {canEdit && <th>Action</th>}
+                  {/* ==================================
+                      EDIT OR DELETE ACTION
+                  ================================== */}
+
+                  {(canEdit || canDelete) && <th>Action</th>}
                 </tr>
               </thead>
 
@@ -155,6 +172,7 @@ function ProductTable({
                     {/* PRODUCT */}
 
                     <td>{product.name}</td>
+
                     {/* CATEGORY */}
 
                     <td>{product.category}</td>
@@ -169,29 +187,40 @@ function ProductTable({
 
                     {/* ACTION */}
 
-                    {canEdit && (
+                    {(canEdit || canDelete) && (
                       <td>
                         <div className="table-actions">
-                          <ProductStatusToggle
-                            isActive={product.active}
-                            disabled={togglingId === product._id}
-                            onChange={() => onToggleActive(product)}
-                          />
+                          {/* STATUS */}
+
+                          {canEdit && (
+                            <ProductStatusToggle
+                              isActive={product.active}
+                              disabled={togglingId === product._id}
+                              onChange={() => onToggleActive(product)}
+                            />
+                          )}
+
                           {/* EDIT */}
 
-                          <button
-                            type="button"
-                            className="icon-button edit-button"
-                            title="Edit Expense"
-                            onClick={() => onEdit(product)}
-                          >
-                            <Pencil size={16} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              className="icon-button edit-button"
+                              title="Edit Product"
+                              onClick={() => onEdit(product)}
+                            >
+                              <Pencil size={16} />
+                            </button>
+                          )}
 
-                          <DeleteButton
-                            onDelete={() => onDelete(product._id)}
-                            itemName={product.name}
-                          />
+                          {/* DELETE */}
+
+                          {canDelete && (
+                            <DeleteButton
+                              onDelete={() => onDelete(product._id)}
+                              itemName={product.name}
+                            />
+                          )}
                         </div>
                       </td>
                     )}

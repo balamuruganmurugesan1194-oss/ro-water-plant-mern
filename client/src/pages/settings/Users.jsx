@@ -15,18 +15,28 @@ const createBlankForm = () => ({
 });
 
 function Users() {
-  const { role } = useAuth();
+  const { isSuperAdmin, permissions = [] } = useAuth();
 
   // ==========================================
-  // ADMIN ONLY
+  // PERMISSIONS
   // ==========================================
 
-  const currentRole =
-    typeof role === "string"
-      ? role.toLowerCase()
-      : role?.name?.toLowerCase() || "";
+  const hasPermission = (permission) => {
+    if (isSuperAdmin === true) {
+      return true;
+    }
 
-  const canEdit = currentRole === "admin";
+    if (permissions.includes("*")) {
+      return true;
+    }
+
+    return permissions.includes(permission);
+  };
+
+  const canView = hasPermission("users.view");
+  const canCreate = hasPermission("users.create");
+  const canEdit = hasPermission("users.edit");
+  const canDelete = hasPermission("users.delete");
 
   // ==========================================
   // STATE
@@ -61,10 +71,18 @@ function Users() {
   // ==========================================
 
   const load = async () => {
+    if (!canView) {
+      return;
+    }
+
     try {
       const response = await api.get("/settings/users");
 
-      setItems(response.data?.users || response.data || []);
+      setItems(
+        Array.isArray(response.data)
+          ? response.data
+          : response.data?.users || [],
+      );
     } catch (err) {
       console.error("Failed to load users:", err);
 
@@ -79,12 +97,20 @@ function Users() {
   // ==========================================
 
   const loadRoles = async () => {
+    if (!canCreate && !canEdit) {
+      return;
+    }
+
     try {
       setRolesLoading(true);
 
       const response = await api.get("/settings/roles/active");
 
-      setRoles(Array.isArray(response.data) ? response.data : []);
+      setRoles(
+        Array.isArray(response.data)
+          ? response.data
+          : response.data?.roles || [],
+      );
     } catch (err) {
       console.error("Failed to load roles:", err);
 
@@ -101,13 +127,14 @@ function Users() {
   // ==========================================
 
   useEffect(() => {
-    if (!canEdit) {
-      return;
+    if (canView) {
+      load();
     }
 
-    load();
-    loadRoles();
-  }, [canEdit]);
+    if (canCreate || canEdit) {
+      loadRoles();
+    }
+  }, [canView, canCreate, canEdit]);
 
   // ==========================================
   // SEARCH
@@ -123,17 +150,6 @@ function Users() {
     const name = item.name?.toLowerCase() || "";
 
     const email = item.email?.toLowerCase() || "";
-
-    /*
-     * User role can now be:
-     *
-     * {
-     *   _id: "...",
-     *   name: "Manager"
-     * }
-     *
-     * OR a string for old users.
-     */
 
     const userRole =
       typeof item.role === "string"
@@ -166,6 +182,20 @@ function Users() {
   // ==========================================
 
   const submit = async () => {
+    // ========================================
+    // FRONTEND PERMISSION PROTECTION
+    // ========================================
+
+    if (editingId && !canEdit) {
+      alert("You do not have permission to edit users.");
+      return;
+    }
+
+    if (!editingId && !canCreate) {
+      alert("You do not have permission to create users.");
+      return;
+    }
+
     const validationErrors = {};
 
     // ========================================
@@ -212,11 +242,6 @@ function Users() {
           isActive: form.isActive,
         };
 
-        /*
-         * Only update password
-         * if entered.
-         */
-
         if (form.password.trim()) {
           payload.password = form.password.trim();
         }
@@ -258,20 +283,14 @@ function Users() {
       setCurrentPage(1);
 
       // ======================================
-      // RELOAD USERS
+      // RELOAD
       // ======================================
 
       await load();
 
-      /*
-       * Reload roles too.
-       *
-       * This is useful if an admin has
-       * recently activated/deactivated
-       * a role.
-       */
-
-      await loadRoles();
+      if (canCreate || canEdit) {
+        await loadRoles();
+      }
     } catch (err) {
       console.error(
         editingId ? "Failed to update user:" : "Failed to save user:",
@@ -293,21 +312,11 @@ function Users() {
 
   const handleEdit = (item) => {
     if (!canEdit) {
+      alert("You do not have permission to edit users.");
       return;
     }
 
     setEditingId(item._id);
-
-    /*
-     * IMPORTANT:
-     *
-     * User.role is now a Role ObjectId
-     * and normally populated by backend.
-     *
-     * SearchableSelect needs:
-     *
-     * role: "ROLE_OBJECT_ID"
-     */
 
     const roleId =
       typeof item.role === "string" ? item.role : item.role?._id || "";
@@ -345,7 +354,8 @@ function Users() {
   // ==========================================
 
   const handleDelete = async (id) => {
-    if (!canEdit) {
+    if (!canDelete) {
+      alert("You do not have permission to delete users.");
       return;
     }
 
@@ -418,26 +428,40 @@ function Users() {
   };
 
   // ==========================================
+  // NO VIEW PERMISSION
+  // ==========================================
+
+  if (!canView) {
+    return (
+      <div className="content">
+        <section className="panel">
+          <div className="empty-state">
+            You do not have permission to view users.
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  // ==========================================
   // PAGE
   // ==========================================
 
   return (
     <div className="content">
       {/* ======================================
-          ADMIN USER FORM
+          USER FORM
       ====================================== */}
 
-      {canEdit && (
+      {(canCreate || canEdit) && (
         <UserForm
           form={form}
           errors={errors}
           saving={saving || rolesLoading}
           editingId={editingId}
-          /*
-           * Dynamic active roles
-           */
-
           roles={roles}
+          canCreate={canCreate}
+          canEdit={canEdit}
           onChange={handleChange}
           onSubmit={submit}
           onCancel={handleCancelEdit}
@@ -454,6 +478,7 @@ function Users() {
         paginatedItems={paginatedItems}
         search={search}
         canEdit={canEdit}
+        canDelete={canDelete}
         currentPage={currentPage}
         totalPages={totalPages}
         totalItems={totalItems}

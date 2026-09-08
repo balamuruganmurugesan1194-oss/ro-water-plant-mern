@@ -1,4 +1,5 @@
 import React from "react";
+
 import { Search, Pencil } from "lucide-react";
 
 import Table from "../common/Table";
@@ -46,6 +47,7 @@ function PartyTable({
     {
       key: "type",
       label: "Type",
+
       value: (row) =>
         row.type ? row.type.charAt(0).toUpperCase() + row.type.slice(1) : "",
     },
@@ -133,7 +135,13 @@ function PartyTable({
           ================================== */}
 
           <Table
-            headers={["Code", "Name", "Contact No", "Area", ...(canEdit || canDelete ? ["Actions"] : [])]}
+            headers={[
+              "Code",
+              "Name",
+              "Contact No",
+              "Area",
+              ...(canEdit || canDelete ? ["Actions"] : []),
+            ]}
             rows={paginatedItems.map((party) => (
               <tr key={party._id}>
                 {/* CODE */}
@@ -154,32 +162,33 @@ function PartyTable({
 
                 {/* ACTIONS */}
 
-                <td>
-                  <div className="table-actions">
-                    {/* EDIT */}
+                {(canEdit || canDelete) && (
+                  <td>
+                    <div className="table-actions">
+                      {/* EDIT */}
 
-                    {canEdit && (
-                      <button
-                        type="button"
-                        className="icon-button edit-button"
-                        title="Edit"
-                        onClick={() => onEdit(party)}
-                      >
-                        <Pencil size={16} />
-                      </button>
-                    )}
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className="icon-button edit-button"
+                          title="Edit Party"
+                          onClick={() => onEdit(party)}
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      )}
 
-                    {/* DELETE */}
+                      {/* DELETE */}
 
-                    {canDelete && (
-                      <DeleteButton
-                        onDelete={() => onDelete(party._id)}
-                        itemName={party.name}
-                      />
-                    )}
-
-                  </div>
-                </td>
+                      {canDelete && (
+                        <DeleteButton
+                          onDelete={() => onDelete(party._id)}
+                          itemName={party.name}
+                        />
+                      )}
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           />

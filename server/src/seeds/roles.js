@@ -1,17 +1,29 @@
-import Role from "../models/Role.js";
 import Permission from "../models/Permission.js";
+import Role from "../models/Role.js";
 
-const roles = [
+// ==========================================
+// ROLE SEED DATA
+// ==========================================
+
+const roleDefinitions = [
   {
     name: "Admin",
-    description: "Full system access",
-    permissionMode: "all",
+
+    description: "Full access to all modules",
+
+    permissions: ["*"],
+
+    isSystemRole: true,
+
+    isActive: true,
   },
 
   {
     name: "Manager",
-    description: "Plant and business management access",
-    permissionKeys: [
+
+    description: "Management access",
+
+    permissions: [
       "dashboard.view",
 
       "products.view",
@@ -34,13 +46,25 @@ const roles = [
       "inventory.opening_stock",
       "inventory.adjustment",
       "inventory.ledger",
+
+      "users.view",
+
+      "roles.view",
+
+      "settings.view",
     ],
+
+    isSystemRole: true,
+
+    isActive: true,
   },
 
   {
     name: "Staff",
-    description: "Daily operational access",
-    permissionKeys: [
+
+    description: "Sales and basic operational access",
+
+    permissions: [
       "products.view",
 
       "sales.view",
@@ -51,12 +75,18 @@ const roles = [
 
       "inventory.view",
     ],
+
+    isSystemRole: true,
+
+    isActive: true,
   },
 
   {
     name: "Accountant",
-    description: "Finance and accounting access",
-    permissionKeys: [
+
+    description: "Accounting and financial access",
+
+    permissions: [
       "dashboard.view",
 
       "sales.view",
@@ -69,86 +99,140 @@ const roles = [
 
       "products.view",
     ],
+
+    isSystemRole: true,
+
+    isActive: true,
   },
 
   {
     name: "Delivery",
-    description: "Delivery operation access",
-    permissionKeys: [
+
+    description: "Delivery and sales viewing access",
+
+    permissions: [
       "sales.view",
+
       "parties.view",
+
       "products.view",
+
       "inventory.view",
     ],
+
+    isSystemRole: true,
+
+    isActive: true,
   },
 
   {
     name: "Production",
-    description: "RO production and inventory access",
-    permissionKeys: [
+
+    description: "Production and inventory access",
+
+    permissions: [
       "products.view",
+
       "inventory.view",
       "inventory.opening_stock",
       "inventory.adjustment",
       "inventory.ledger",
     ],
+
+    isSystemRole: true,
+
+    isActive: true,
   },
 
   {
     name: "Viewer",
-    description: "Read-only access",
-    permissionKeys: [
+
+    description: "Read-only application access",
+
+    permissions: [
       "dashboard.view",
+
       "products.view",
+
       "sales.view",
+
       "expenses.view",
+
       "parties.view",
+
       "inventory.view",
     ],
+
+    isSystemRole: true,
+
+    isActive: true,
   },
 ];
 
+// ==========================================
+// SEED ROLES
+// ==========================================
+
 export const seedRoles = async () => {
-  const permissions = await Permission.find({
-    isActive: true,
-  });
-
-  const permissionMap = new Map(
-    permissions.map((permission) => [permission.key, permission._id]),
-  );
-
-  for (const roleData of roles) {
+  for (const definition of roleDefinitions) {
     let permissionIds = [];
 
-    if (roleData.permissionMode === "all") {
-      permissionIds = permissions.map((permission) => permission._id);
+    // ======================================
+    // ALL PERMISSIONS
+    // ======================================
+
+    if (definition.permissions.includes("*")) {
+      const allPermissions = await Permission.find({
+        isActive: true,
+      }).select("_id");
+
+      permissionIds = allPermissions.map((permission) => permission._id);
     } else {
-      permissionIds = (roleData.permissionKeys || [])
-        .map((key) => permissionMap.get(key))
-        .filter(Boolean);
+      // ====================================
+      // SELECTED PERMISSIONS
+      // ====================================
+
+      const permissionDocuments = await Permission.find({
+        key: {
+          $in: definition.permissions,
+        },
+
+        isActive: true,
+      }).select("_id key");
+
+      permissionIds = permissionDocuments.map((permission) => permission._id);
     }
+
+    // ======================================
+    // CREATE / UPDATE ROLE
+    // ======================================
 
     await Role.findOneAndUpdate(
       {
-        name: roleData.name,
+        name: definition.name,
       },
       {
         $set: {
-          description: roleData.description,
+          name: definition.name,
+
+          description: definition.description,
 
           permissions: permissionIds,
 
-          isSystemRole: true,
+          isSystemRole: definition.isSystemRole,
 
-          isActive: true,
+          isActive: definition.isActive,
         },
       },
       {
         upsert: true,
         new: true,
+        setDefaultsOnInsert: true,
       },
     );
+
+    console.log(`✓ Role seeded: ${definition.name}`);
   }
 
-  console.log("Roles seeded successfully");
+  console.log("✓ All roles seeded successfully");
 };

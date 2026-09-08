@@ -7,7 +7,7 @@ import {
   getNextSaleNumber,
 } from "../controllers/saleController.js";
 
-import { auth } from "../middleware/auth.js";
+import { auth, requirePermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -16,27 +16,33 @@ const router = express.Router();
 // ==========================================
 
 router.use(auth);
-// Get next sale number
-router.get("/next-number", getNextSaleNumber);
+
 // ==========================================
-// GET SALES
-// GET /api/sales
+// GET NEXT SALE NUMBER
 // ==========================================
 
-router.get("/", getSales);
+router.get(
+  "/next-number",
+  requirePermission("sales.create"),
+  getNextSaleNumber,
+);
+
+// ==========================================
+// GET SALES
+// ==========================================
+
+router.get("/", requirePermission("sales.view"), getSales);
 
 // ==========================================
 // CREATE SALE
-// POST /api/sales
 // ==========================================
 
-router.post("/", createSale);
+router.post("/", requirePermission("sales.create"), createSale);
 
 // ==========================================
 // DELETE SALE
-// DELETE /api/sales/:id
 // ==========================================
 
-router.delete("/:id", deleteSale);
+router.delete("/:id", requirePermission("sales.delete"), deleteSale);
 
 export default router;

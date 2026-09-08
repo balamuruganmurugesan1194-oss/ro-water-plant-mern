@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
+
 import { Plus } from "lucide-react";
+
 import api from "../../api/client";
+
 import SearchableSelect from "../common/SearchableSelect";
+
 import { categories, units } from "../../data/products.json";
 
 // ==========================================
@@ -18,8 +22,16 @@ function ProductForm({
   setSaving,
   onReset,
   onSaved,
+
+  // ========================================
+  // PERMISSIONS
+  // ========================================
+
+  canCreate = false,
+  canEdit = false,
 }) {
   const [generatedCode, setGeneratedCode] = useState("");
+
   const [loadingCode, setLoadingCode] = useState(false);
 
   // ==========================================
@@ -48,11 +60,13 @@ function ProductForm({
 
   useEffect(() => {
     if (!editingId) {
-      getNextProductCode();
+      if (canCreate) {
+        getNextProductCode();
+      }
     } else {
       setGeneratedCode(form.code || "");
     }
-  }, [editingId, form.code]);
+  }, [editingId, form.code, canCreate]);
 
   // ==========================================
   // HANDLE CHANGE
@@ -138,6 +152,22 @@ function ProductForm({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // ========================================
+    // PERMISSION CHECK
+    // ========================================
+
+    if (editingId && !canEdit) {
+      alert("You do not have permission to edit products.");
+
+      return;
+    }
+
+    if (!editingId && !canCreate) {
+      alert("You do not have permission to create products.");
+
+      return;
+    }
+
     setErrors({});
 
     if (!validate()) {
@@ -163,10 +193,15 @@ function ProductForm({
 
       const payload = {
         name: form.name.trim(),
+
         category: form.category.trim(),
+
         unit: form.unit.trim(),
+
         rate: Number(form.rate),
+
         active: form.active,
+
         description: form.description?.trim() || "",
       };
 
@@ -199,6 +234,7 @@ function ProductForm({
       // ========================================
       // RELOAD PRODUCTS
       // ========================================
+
       if (!editingId) {
         await getNextProductCode();
       }
@@ -280,9 +316,7 @@ function ProductForm({
       ======================================== */}
 
       <form className="form-grid" onSubmit={handleSubmit} noValidate>
-        {/* ======================================
-            PRODUCT CODE
-        ====================================== */}
+        {/* PRODUCT CODE */}
 
         <label>
           Product Code
@@ -293,12 +327,9 @@ function ProductForm({
             className="readonly-input"
             placeholder="Auto generated"
           />
-          {/* <small className="field-hint">Automatically generated</small> */}
         </label>
 
-        {/* ======================================
-            PRODUCT NAME
-        ====================================== */}
+        {/* PRODUCT NAME */}
 
         <label>
           Product Name
@@ -312,9 +343,7 @@ function ProductForm({
           {errors.name && <small className="error-text">{errors.name}</small>}
         </label>
 
-        {/* ======================================
-            CATEGORY
-        ====================================== */}
+        {/* CATEGORY */}
 
         <div className="form-field">
           <label htmlFor="category">Category</label>
@@ -332,9 +361,7 @@ function ProductForm({
           )}
         </div>
 
-        {/* ======================================
-            UNIT
-        ====================================== */}
+        {/* UNIT */}
 
         <div className="form-field">
           <label htmlFor="unit">Unit</label>
@@ -350,9 +377,7 @@ function ProductForm({
           {errors.unit && <small className="error-text">{errors.unit}</small>}
         </div>
 
-        {/* ======================================
-            RATE
-        ====================================== */}
+        {/* RATE */}
 
         <label>
           Rate
@@ -368,9 +393,7 @@ function ProductForm({
           {errors.rate && <small className="error-text">{errors.rate}</small>}
         </label>
 
-        {/* ======================================
-            DESCRIPTION
-        ====================================== */}
+        {/* DESCRIPTION */}
 
         <label className="description-field">
           Description
@@ -381,9 +404,7 @@ function ProductForm({
           />
         </label>
 
-        {/* ======================================
-            SAVE BUTTON
-        ====================================== */}
+        {/* SAVE BUTTON */}
 
         <div className="form-submit">
           <button

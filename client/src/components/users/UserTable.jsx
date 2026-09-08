@@ -33,6 +33,7 @@ function UserTable({
   paginatedItems,
   search,
   canEdit,
+  canDelete,
   currentPage,
   totalPages,
   totalItems,
@@ -44,6 +45,12 @@ function UserTable({
   onItemsPerPageChange,
 }) {
   // ==========================================
+  // ACTION PERMISSION
+  // ==========================================
+
+  const canShowActions = canEdit || canDelete;
+  console.log(items);
+  // ==========================================
   // ROLE LABEL
   // ==========================================
 
@@ -52,19 +59,10 @@ function UserTable({
       return "—";
     }
 
-    // New dynamic Role object
-    // Example:
-    // {
-    //   _id: "...",
-    //   name: "Manager",
-    //   description: "...",
-    //   isActive: true
-    // }
     if (typeof role === "object") {
       return role.name || "—";
     }
 
-    // Backward compatibility for old string roles
     if (typeof role === "string") {
       if (role === "power_user") {
         return "Power User";
@@ -86,9 +84,7 @@ function UserTable({
         <h3>User Register</h3>
 
         <div className="filters">
-          {/* ==================================
-              SEARCH
-          ================================== */}
+          {/* SEARCH */}
 
           <div className="search-box">
             <Search size={17} />
@@ -101,9 +97,7 @@ function UserTable({
             />
           </div>
 
-          {/* ==================================
-              EXPORT
-          ================================== */}
+          {/* EXPORT */}
 
           <ExportButtons
             data={items}
@@ -133,51 +127,52 @@ function UserTable({
           ================================== */}
 
           <Table
-            headers={["Name", "Email", "Role", ...(canEdit ? ["Actions"] : [])]}
+            headers={[
+              "Name",
+              "Email",
+              "Role",
+              ...(canShowActions ? ["Actions"] : []),
+            ]}
             rows={paginatedItems.map((item) => (
               <tr key={item._id}>
-                {/* ==========================
-                    NAME
-                ========================== */}
+                {/* NAME */}
 
                 <td>{item.name || "—"}</td>
 
-                {/* ==========================
-                    EMAIL
-                ========================== */}
+                {/* EMAIL */}
 
                 <td>{item.email || "—"}</td>
 
-                {/* ==========================
-                    ROLE NAME
-                ========================== */}
+                {/* ROLE */}
 
                 <td>{getRoleLabel(item.role)}</td>
 
-                {/* ==========================
-                    ACTIONS
-                ========================== */}
+                {/* ACTIONS */}
 
-                {canEdit && (
+                {canShowActions && (
                   <td>
                     <div className="table-actions">
                       {/* EDIT */}
 
-                      <button
-                        type="button"
-                        className="icon-button edit-button"
-                        title="Edit User"
-                        onClick={() => onEdit(item)}
-                      >
-                        <Pencil size={16} />
-                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className="icon-button edit-button"
+                          title="Edit User"
+                          onClick={() => onEdit(item)}
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      )}
 
                       {/* DELETE */}
 
-                      <DeleteButton
-                        onDelete={() => onDelete(item._id)}
-                        itemName={item.name || "User"}
-                      />
+                      {canDelete && item.isDefault !== true && (
+                        <DeleteButton
+                          onDelete={() => onDelete(item._id)}
+                          itemName={item.name || "User"}
+                        />
+                      )}
                     </div>
                   </td>
                 )}

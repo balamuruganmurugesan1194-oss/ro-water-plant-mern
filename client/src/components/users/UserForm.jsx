@@ -9,11 +9,15 @@ function UserForm({
   saving,
   editingId,
   roles = [],
+  canCreate = false,
+  canEdit = false,
   onChange,
   onSubmit,
   onCancel,
 }) {
   const isEditing = Boolean(editingId);
+
+  const canSubmit = isEditing ? canEdit : canCreate;
 
   const roleOptions = roles.map((role) => ({
     value: role._id,
@@ -28,6 +32,17 @@ function UserForm({
         className="form-grid"
         onSubmit={(event) => {
           event.preventDefault();
+
+          if (!canSubmit) {
+            alert(
+              isEditing
+                ? "You do not have permission to edit users."
+                : "You do not have permission to create users.",
+            );
+
+            return;
+          }
+
           onSubmit();
         }}
       >
@@ -113,11 +128,13 @@ function UserForm({
         <div className="form-submit">
           {isEditing ? (
             <>
-              <button className="primary" type="submit" disabled={saving}>
-                <Save size={18} />
+              {canEdit && (
+                <button className="primary" type="submit" disabled={saving}>
+                  <Save size={18} />
 
-                {saving ? "Updating..." : "Update User"}
-              </button>
+                  {saving ? "Updating..." : "Update User"}
+                </button>
+              )}
 
               <button
                 type="button"
@@ -130,11 +147,13 @@ function UserForm({
               </button>
             </>
           ) : (
-            <button className="primary" type="submit" disabled={saving}>
-              <Plus size={18} />
+            canCreate && (
+              <button className="primary" type="submit" disabled={saving}>
+                <Plus size={18} />
 
-              {saving ? "Saving..." : "Save User"}
-            </button>
+                {saving ? "Saving..." : "Save User"}
+              </button>
+            )
           )}
         </div>
       </form>

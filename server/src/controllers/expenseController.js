@@ -1,6 +1,7 @@
 import Expense from "../models/Expense.js";
 import Counter from "../models/Counter.js";
 import { getNextNumber } from "../utils/getNextNumber.js";
+
 // ==========================================
 // GET EXPENSES
 // GET /api/expenses
@@ -40,6 +41,7 @@ export const getExpenses = async (req, res) => {
     });
   }
 };
+
 // ======================================================
 // CREATE EXPENSE
 // ======================================================
@@ -149,6 +151,11 @@ export const deleteExpense = async (req, res) => {
     });
   }
 };
+
+// ==========================================
+// GET NEXT EXPENSE NUMBER
+// ==========================================
+
 export const getNextExpenseNumber = async (req, res) => {
   try {
     const counter = await Counter.findOne({
@@ -170,6 +177,12 @@ export const getNextExpenseNumber = async (req, res) => {
     });
   }
 };
+
+// ==========================================
+// UPDATE EXPENSE
+// PUT /api/expenses/:id
+// ==========================================
+
 export const updateExpense = async (req, res) => {
   try {
     const { id } = req.params;
