@@ -1,188 +1,233 @@
 import bcrypt from "bcryptjs";
+
 import User from "../models/User.js";
 import Role from "../models/Role.js";
 
 // ==========================================
 // GET USERS
-// GET /api/settings/users
 // ==========================================
 
-export const getUsers = async (req, res) => {
+export const getUsers = async (
+  req,
+  res
+) => {
   try {
-    const users = await User.find()
-      .select("-password")
-      .populate("role", "name description isActive")
-      .sort({ createdAt: -1 });
+    const users =
+      await User.find()
+        .select("-password")
+        .populate(
+          "role",
+          "name description isActive"
+        )
+        .sort({
+          createdAt: 1,
+        });
 
-    res.status(200).json(users);
+    return res.status(200).json(users);
   } catch (error) {
-    console.error("Get users error:", error);
+    console.error(
+      "Get users error:",
+      error
+    );
 
-    res.status(500).json({
-      message: "Failed to load users",
+    return res.status(500).json({
+      message:
+        "Failed to load users",
     });
   }
 };
 
 // ==========================================
 // GET SINGLE USER
-// GET /api/settings/users/:id
 // ==========================================
 
-export const getUser = async (req, res) => {
+export const getUser = async (
+  req,
+  res
+) => {
   try {
-    const user = await User.findById(req.params.id)
-      .select("-password")
-      .populate("role", "name description isActive");
+    const user =
+      await User.findById(
+        req.params.id
+      )
+        .select("-password")
+        .populate(
+          "role",
+          "name description isActive"
+        );
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found",
+        message:
+          "User not found",
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       user,
     });
   } catch (error) {
-    console.error("Get user error:", error);
+    console.error(
+      "Get user error:",
+      error
+    );
 
-    res.status(500).json({
-      message: "Failed to fetch user",
+    return res.status(500).json({
+      message:
+        "Failed to fetch user",
     });
   }
 };
 
 // ==========================================
 // CREATE USER
-// POST /api/settings/users
 // ==========================================
 
-export const createUser = async (req, res) => {
+export const createUser = async (
+  req,
+  res
+) => {
   try {
-    const { name, email, password, role, isActive = true } = req.body;
-
-    // ======================================
-    // NAME
-    // ======================================
+    const {
+      name,
+      email,
+      password,
+      role,
+    } = req.body;
 
     if (!name?.trim()) {
       return res.status(400).json({
-        message: "Name is required",
+        message:
+          "Name is required",
       });
     }
-
-    // ======================================
-    // EMAIL
-    // ======================================
 
     if (!email?.trim()) {
       return res.status(400).json({
-        message: "Email is required",
+        message:
+          "Email is required",
       });
     }
 
-    // ======================================
-    // PASSWORD
-    // ======================================
-
     if (!password) {
       return res.status(400).json({
-        message: "Password is required",
+        message:
+          "Password is required",
       });
     }
 
     if (password.length < 6) {
       return res.status(400).json({
-        message: "Password must be at least 6 characters",
+        message:
+          "Password must be at least 6 characters",
       });
     }
-
-    // ======================================
-    // ROLE
-    // ======================================
 
     if (!role) {
       return res.status(400).json({
-        message: "Role is required",
+        message:
+          "Role is required",
       });
     }
 
-    const roleExists = await Role.findById(role);
+    const roleExists =
+      await Role.findById(role);
 
     if (!roleExists) {
       return res.status(400).json({
-        message: "Selected role does not exist",
+        message:
+          "Selected role does not exist",
       });
     }
 
-    if (roleExists.isActive === false) {
+    if (
+      roleExists.isActive ===
+      false
+    ) {
       return res.status(400).json({
-        message: "Selected role is inactive",
+        message:
+          "Selected role is inactive",
       });
     }
 
-    // ======================================
-    // EXISTING EMAIL
-    // ======================================
+    const normalizedEmail =
+      email
+        .trim()
+        .toLowerCase();
 
-    const existingUser = await User.findOne({
-      email: email.trim().toLowerCase(),
-    });
+    const existingUser =
+      await User.findOne({
+        email:
+          normalizedEmail,
+      });
 
     if (existingUser) {
       return res.status(409).json({
-        message: "Email already exists",
+        message:
+          "Email already exists",
       });
     }
 
-    // ======================================
-    // HASH PASSWORD
-    // ======================================
+    const hashedPassword =
+      await bcrypt.hash(
+        password,
+        10
+      );
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const user =
+      await User.create({
+        name: name.trim(),
+        email:
+          normalizedEmail,
+        password:
+          hashedPassword,
+        role,
 
-    // ======================================
-    // CREATE USER
-    // ======================================
+        // Every newly-created
+        // user starts active.
+        isActive: true,
 
-    const user = await User.create({
-      name: name.trim(),
+        isDefault: false,
 
-      email: email.trim().toLowerCase(),
+        isSuperAdmin: false,
+      });
 
-      password: hashedPassword,
-
-      role: role,
-
-      isActive: isActive !== false,
-
-      isSuperAdmin: false,
-    });
-
-    // ======================================
-    // RESPONSE
-    // ======================================
-
-    const responseUser = user.toObject();
-
-    delete responseUser.password;
-
-    const populatedUser = await User.findById(user._id)
-      .select("-password")
-      .populate("role", "name description isActive");
+    const populatedUser =
+      await User.findById(
+        user._id
+      )
+        .select("-password")
+        .populate(
+          "role",
+          "name description isActive"
+        );
 
     return res.status(201).json({
       success: true,
-      message: "User created successfully",
+      message:
+        "User created successfully",
       user: populatedUser,
     });
   } catch (error) {
-    console.error("CREATE USER ERROR:", error);
+    console.error(
+      "CREATE USER ERROR:",
+      error
+    );
+
+    if (
+      error.code === 11000
+    ) {
+      return res.status(409).json({
+        message:
+          "Email already exists",
+      });
+    }
 
     return res.status(500).json({
-      message: error.message || "Failed to create user",
+      message:
+        error.message ||
+        "Failed to create user",
     });
   }
 };
@@ -190,191 +235,373 @@ export const createUser = async (req, res) => {
 // ==========================================
 // UPDATE USER
 // PUT /api/settings/users/:id
+//
+// IMPORTANT:
+// isActive is NOT updated here.
 // ==========================================
 
-export const updateUser = async (req, res) => {
+export const updateUser = async (
+  req,
+  res
+) => {
   try {
-    const { name, email, password, role, isActive } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role,
+    } = req.body;
 
-    const user = await User.findById(req.params.id).select("+password");
+    const user =
+      await User.findById(
+        req.params.id
+      ).select("+password");
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found",
+        message:
+          "User not found",
       });
     }
 
-    // ======================================
     // NAME
-    // ======================================
 
     if (name !== undefined) {
       if (!name.trim()) {
         return res.status(400).json({
-          message: "Name is required",
+          message:
+            "Name is required",
         });
       }
 
-      user.name = name.trim();
+      user.name =
+        name.trim();
     }
 
-    // ======================================
     // EMAIL
-    // ======================================
 
     if (email !== undefined) {
-      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedEmail =
+        email
+          .trim()
+          .toLowerCase();
 
       if (!normalizedEmail) {
         return res.status(400).json({
-          message: "Email is required",
+          message:
+            "Email is required",
         });
       }
 
-      const existingUser = await User.findOne({
-        email: normalizedEmail,
-        _id: {
-          $ne: user._id,
-        },
-      });
+      const existingUser =
+        await User.findOne({
+          email:
+            normalizedEmail,
+
+          _id: {
+            $ne: user._id,
+          },
+        });
 
       if (existingUser) {
         return res.status(409).json({
-          message: "Email already exists",
+          message:
+            "Email already exists",
         });
       }
 
-      user.email = normalizedEmail;
+      user.email =
+        normalizedEmail;
     }
 
-    // ======================================
     // ROLE
-    // ======================================
 
     if (role !== undefined) {
       if (!role) {
         return res.status(400).json({
-          message: "Role is required",
+          message:
+            "Role is required",
         });
       }
 
-      const roleExists = await Role.findById(role);
+      const roleExists =
+        await Role.findById(role);
 
       if (!roleExists) {
         return res.status(400).json({
-          message: "Selected role does not exist",
+          message:
+            "Selected role does not exist",
         });
       }
 
-      if (roleExists.isActive === false) {
+      if (
+        roleExists.isActive ===
+        false
+      ) {
         return res.status(400).json({
-          message: "Selected role is inactive",
+          message:
+            "Selected role is inactive",
         });
       }
 
       user.role = role;
     }
 
-    // ======================================
-    // ACTIVE STATUS
-    // ======================================
-
-    if (isActive !== undefined) {
-      user.isActive = Boolean(isActive);
-    }
-
-    // ======================================
     // PASSWORD
-    // ======================================
 
     if (password) {
       if (password.length < 6) {
         return res.status(400).json({
-          message: "Password must be at least 6 characters",
+          message:
+            "Password must be at least 6 characters",
         });
       }
 
-      user.password = await bcrypt.hash(password, 10);
+      user.password =
+        await bcrypt.hash(
+          password,
+          10
+        );
     }
+
+    // DO NOT UPDATE isActive HERE
 
     await user.save();
 
-    // ======================================
-    // RESPONSE
-    // ======================================
-
-    const populatedUser = await User.findById(user._id)
-      .select("-password")
-      .populate("role", "name description isActive");
+    const populatedUser =
+      await User.findById(
+        user._id
+      )
+        .select("-password")
+        .populate(
+          "role",
+          "name description isActive"
+        );
 
     return res.status(200).json({
       success: true,
-      message: "User updated successfully",
+      message:
+        "User updated successfully",
       user: populatedUser,
     });
   } catch (error) {
-    console.error("UPDATE USER ERROR:", error);
+    console.error(
+      "UPDATE USER ERROR:",
+      error
+    );
+
+    if (
+      error.code === 11000
+    ) {
+      return res.status(409).json({
+        message:
+          "Email already exists",
+      });
+    }
 
     return res.status(500).json({
-      message: error.message || "Failed to update user",
+      message:
+        error.message ||
+        "Failed to update user",
     });
   }
 };
 
 // ==========================================
-// DELETE USER
-// DELETE /api/settings/users/:id
+// UPDATE USER STATUS
+//
+// PATCH /api/settings/users/:id/status
 // ==========================================
 
-export const deleteUser = async (req, res) => {
+export const updateUserStatus =
+  async (req, res) => {
+    try {
+      const { id } =
+        req.params;
+
+      const {
+        isActive,
+      } = req.body;
+
+      // ====================================
+      // VALIDATION
+      // ====================================
+
+      if (
+        typeof isActive !==
+        "boolean"
+      ) {
+        return res.status(400).json({
+          message:
+            "isActive must be a boolean value",
+        });
+      }
+
+      // ====================================
+      // FIND USER
+      // ====================================
+
+      const user =
+        await User.findById(id);
+
+      if (!user) {
+        return res.status(404).json({
+          message:
+            "User not found",
+        });
+      }
+
+      // ====================================
+      // DEFAULT USER PROTECTION
+      // ====================================
+
+      if (
+        user.isDefault ===
+        true
+      ) {
+        return res.status(403).json({
+          message:
+            "Default user status cannot be changed",
+        });
+      }
+
+      // ====================================
+      // SUPER ADMIN PROTECTION
+      // ====================================
+
+      if (
+        user.isSuperAdmin ===
+        true
+      ) {
+        return res.status(403).json({
+          message:
+            "Super Administrator status cannot be changed",
+        });
+      }
+
+      // ====================================
+      // UPDATE STATUS
+      // ====================================
+
+      user.isActive =
+        isActive;
+
+      await user.save();
+
+      // ====================================
+      // RESPONSE
+      // ====================================
+
+      const updatedUser =
+        await User.findById(
+          id
+        )
+          .select("-password")
+          .populate(
+            "role",
+            "name description isActive"
+          );
+
+      return res.status(200).json({
+        success: true,
+
+        message: isActive
+          ? "User activated successfully"
+          : "User deactivated successfully",
+
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error(
+        "UPDATE USER STATUS ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        message:
+          "Failed to update user status",
+      });
+    }
+  };
+
+// ==========================================
+// DELETE USER
+// ==========================================
+
+export const deleteUser = async (
+  req,
+  res
+) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user =
+      await User.findById(
+        req.params.id
+      );
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found",
+        message:
+          "User not found",
       });
     }
 
-    // ======================================
-    // PREVENT DELETING YOURSELF
-    // ======================================
+    // Prevent self-delete
 
     if (
       req.user &&
       req.user.id &&
-      req.user.id.toString() === user._id.toString()
+      req.user.id.toString() ===
+        user._id.toString()
     ) {
       return res.status(400).json({
-        message: "You cannot delete your own account",
+        message:
+          "You cannot delete your own account",
       });
     }
 
-    // ======================================
-    // PREVENT DELETING SUPER ADMIN
-    // ======================================
+    // Prevent default user delete
 
-    if (user.isSuperAdmin === true) {
+    if (
+      user.isDefault ===
+      true
+    ) {
       return res.status(403).json({
-        message: "Super Administrator cannot be deleted",
+        message:
+          "Default user cannot be deleted",
       });
     }
 
-    // ======================================
-    // DELETE
-    // ======================================
+    // Prevent super admin delete
 
-    await User.findByIdAndDelete(req.params.id);
+    if (
+      user.isSuperAdmin ===
+      true
+    ) {
+      return res.status(403).json({
+        message:
+          "Super Administrator cannot be deleted",
+      });
+    }
+
+    await User.findByIdAndDelete(
+      req.params.id
+    );
 
     return res.status(200).json({
       success: true,
-      message: "User deleted successfully",
+      message:
+        "User deleted successfully",
     });
   } catch (error) {
-    console.error("DELETE USER ERROR:", error);
+    console.error(
+      "DELETE USER ERROR:",
+      error
+    );
 
     return res.status(500).json({
-      message: error.message || "Failed to delete user",
+      message:
+        error.message ||
+        "Failed to delete user",
     });
   }
 };
