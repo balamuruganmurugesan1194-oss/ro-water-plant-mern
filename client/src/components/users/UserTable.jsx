@@ -1,11 +1,16 @@
 import React from "react";
 
-import { Search, Pencil } from "lucide-react";
+import {
+  Search,
+  Pencil,
+} from "lucide-react";
 
 import Table from "../common/Table";
 import Pagination from "../common/Pagination";
 import DeleteButton from "../common/DeleteButton";
 import ExportButtons from "../common/ExportButtons";
+
+import UserStatusToggle from "./UserStatusToggle";
 
 const userExportColumns = [
   {
@@ -19,6 +24,10 @@ const userExportColumns = [
   {
     key: "role",
     label: "Role",
+  },
+  {
+    key: "isActive",
+    label: "Status",
   },
   {
     key: "createdAt",
@@ -41,18 +50,12 @@ function UserTable({
   onSearchChange,
   onEdit,
   onDelete,
+  onStatusChange,
   onPageChange,
   onItemsPerPageChange,
 }) {
-  // ==========================================
-  // ACTION PERMISSION
-  // ==========================================
-
-  const canShowActions = canEdit || canDelete;
-  console.log(items);
-  // ==========================================
-  // ROLE LABEL
-  // ==========================================
+  const canShowActions =
+    canEdit || canDelete;
 
   const getRoleLabel = (role) => {
     if (!role) {
@@ -68,7 +71,10 @@ function UserTable({
         return "Power User";
       }
 
-      return role.charAt(0).toUpperCase() + role.slice(1);
+      return (
+        role.charAt(0).toUpperCase() +
+        role.slice(1)
+      );
     }
 
     return "—";
@@ -76,9 +82,7 @@ function UserTable({
 
   return (
     <section className="panel">
-      {/* ======================================
-          HEADER
-      ====================================== */}
+      {/* HEADER */}
 
       <div className="panel-head">
         <h3>User Register</h3>
@@ -93,7 +97,11 @@ function UserTable({
               type="search"
               placeholder="Search name, email, role..."
               value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
+              onChange={(e) =>
+                onSearchChange(
+                  e.target.value
+                )
+              }
             />
           </div>
 
@@ -106,91 +114,176 @@ function UserTable({
             fileName="User_Register"
             sheetName="Users"
             filters={{
-              Search: search || "All",
+              Search:
+                search || "All",
             }}
           />
         </div>
       </div>
 
-      {/* ======================================
-          EMPTY STATE
-      ====================================== */}
+      {/* EMPTY */}
 
       {items.length === 0 ? (
-        <div className="empty-state">No users found.</div>
-      ) : filteredItems.length === 0 ? (
-        <div className="empty-state">No matching users found.</div>
+        <div className="empty-state">
+          No users found.
+        </div>
+      ) : filteredItems.length ===
+        0 ? (
+        <div className="empty-state">
+          No matching users found.
+        </div>
       ) : (
         <>
-          {/* ==================================
-              TABLE
-          ================================== */}
-
           <Table
             headers={[
               "Name",
               "Email",
               "Role",
-              ...(canShowActions ? ["Actions"] : []),
+              "Status",
+              ...(canShowActions
+                ? ["Actions"]
+                : []),
             ]}
-            rows={paginatedItems.map((item) => (
-              <tr key={item._id}>
-                {/* NAME */}
+            rows={paginatedItems.map(
+              (item) => (
+                <tr key={item._id}>
+                  {/* NAME */}
 
-                <td>{item.name || "—"}</td>
-
-                {/* EMAIL */}
-
-                <td>{item.email || "—"}</td>
-
-                {/* ROLE */}
-
-                <td>{getRoleLabel(item.role)}</td>
-
-                {/* ACTIONS */}
-
-                {canShowActions && (
                   <td>
-                    <div className="table-actions">
-                      {/* EDIT */}
+                    {item.name || "—"}
 
-                      {canEdit && (
-                        <button
-                          type="button"
-                          className="icon-button edit-button"
-                          title="Edit User"
-                          onClick={() => onEdit(item)}
-                        >
-                          <Pencil size={16} />
-                        </button>
-                      )}
+                    {item.isDefault ===
+                      true && (
+                      <span
+                        style={{
+                          marginLeft:
+                            "8px",
+                          fontSize:
+                            "11px",
+                          padding:
+                            "3px 7px",
+                          borderRadius:
+                            "10px",
+                          background:
+                            "#e0f2fe",
+                          color:
+                            "#0369a1",
+                          fontWeight:
+                            600,
+                        }}
+                      >
+                        Default
+                      </span>
+                    )}
+                  </td>
 
-                      {/* DELETE */}
+                  {/* EMAIL */}
 
-                      {canDelete && item.isDefault !== true && (
-                        <DeleteButton
-                          onDelete={() => onDelete(item._id)}
-                          itemName={item.name || "User"}
-                        />
-                      )}
+                  <td>
+                    {item.email || "—"}
+                  </td>
+
+                  {/* ROLE */}
+
+                  <td>
+                    {getRoleLabel(
+                      item.role
+                    )}
+                  </td>
+
+                  {/* STATUS */}
+
+                  <td>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems:
+                          "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <UserStatusToggle
+                        isActive={
+                          item.isActive !==
+                          false
+                        }
+                        onChange={() =>
+                          onStatusChange(
+                            item
+                          )
+                        }
+                        disabled={
+                          !canEdit ||
+                          item.isDefault ===
+                            true
+                        }
+                      />
+
                     </div>
                   </td>
-                )}
-              </tr>
-            ))}
+
+                  {/* ACTIONS */}
+
+                  {canShowActions && (
+                    <td>
+                      <div className="table-actions">
+                        {/* EDIT */}
+
+                        {canEdit && (
+                          <button
+                            type="button"
+                            className="icon-button edit-button"
+                            title="Edit User"
+                            onClick={() =>
+                              onEdit(item)
+                            }
+                          >
+                            <Pencil
+                              size={16}
+                            />
+                          </button>
+                        )}
+
+                        {/* DELETE */}
+
+                        {canDelete &&
+                          item.isDefault !==
+                            true && (
+                            <DeleteButton
+                              onDelete={() =>
+                                onDelete(
+                                  item._id
+                                )
+                              }
+                              itemName={
+                                item.name ||
+                                "User"
+                              }
+                            />
+                          )}
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              )
+            )}
           />
 
-          {/* ==================================
-              PAGINATION
-          ================================== */}
-
           <Pagination
-            currentPage={currentPage}
+            currentPage={
+              currentPage
+            }
             totalPages={totalPages}
             totalItems={totalItems}
-            itemsPerPage={itemsPerPage}
-            onPageChange={onPageChange}
-            onItemsPerPageChange={onItemsPerPageChange}
+            itemsPerPage={
+              itemsPerPage
+            }
+            onPageChange={
+              onPageChange
+            }
+            onItemsPerPageChange={
+              onItemsPerPageChange
+            }
           />
         </>
       )}
