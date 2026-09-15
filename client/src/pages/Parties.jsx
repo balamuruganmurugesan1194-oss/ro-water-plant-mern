@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 import api from "../api/client";
 
@@ -6,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 
 import PartyForm from "../components/parties/PartyForm";
 import PartyTable from "../components/parties/PartyTable";
+import { fetchParties, partyActions } from "../app/resourceSlice";
 
 // ==========================================
 // INITIAL FORM
@@ -23,6 +25,10 @@ const initialForm = {
 // ==========================================
 
 function Parties() {
+  const dispatch = useDispatch();
+  const { data: items, error: loadError } = useSelector(
+    (state) => state.parties,
+  );
   // ==========================================
   // AUTH / PERMISSIONS
   // ==========================================
@@ -55,8 +61,6 @@ function Parties() {
 
   const [type, setType] = useState("customer");
 
-  const [items, setItems] = useState([]);
-
   const [saving, setSaving] = useState(false);
 
   const [errors, setErrors] = useState({});
@@ -87,19 +91,13 @@ function Parties() {
 
   const load = async () => {
     if (!canView) {
-      setItems([]);
-
       return;
     }
 
     try {
-      const response = await api.get(`/parties?type=${type}`);
-
-      setItems(response.data || []);
+      await dispatch(fetchParties({ type }));
     } catch (err) {
       console.error("Failed to load parties:", err);
-
-      setItems([]);
     }
   };
 
@@ -124,6 +122,18 @@ function Parties() {
       load();
     }
   }, [type, canView]);
+
+  useEffect(() => {
+    if (!canView || !search) {
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      dispatch(fetchParties({ type, search }));
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [search, type, canView, dispatch]);
 
   // ==========================================
   // SEARCH
@@ -236,6 +246,7 @@ function Parties() {
 
         setCurrentPage(1);
 
+        dispatch(partyActions.clearResource());
         await load();
 
         return;
@@ -275,6 +286,7 @@ function Parties() {
       // RELOAD
       // ========================================
 
+      dispatch(partyActions.clearResource());
       await load();
     } catch (err) {
       console.error("Failed to save party:", err);
@@ -301,6 +313,7 @@ function Parties() {
     try {
       await api.delete(`/parties/${id}`);
 
+      dispatch(partyActions.clearResource());
       await load();
 
       const remainingItems = items.length - 1;

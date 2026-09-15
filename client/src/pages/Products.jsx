@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/client";
+import { fetchProducts, productActions } from "../app/resourceSlice";
 
 import ProductForm from "../components/products/ProductForm";
 import ProductTable from "../components/products/ProductTable";
@@ -24,6 +26,12 @@ const createBlankProduct = () => ({
 // ==========================================
 
 function Products() {
+  const dispatch = useDispatch();
+  const {
+    data: products,
+    loading,
+    error: loadError,
+  } = useSelector((state) => state.products);
   // ==========================================
   // AUTH / PERMISSIONS
   // ==========================================
@@ -52,13 +60,9 @@ function Products() {
   // STATE
   // ==========================================
 
-  const [products, setProducts] = useState([]);
-
   const [form, setForm] = useState(createBlankProduct());
 
   const [errors, setErrors] = useState({});
-
-  const [loading, setLoading] = useState(false);
 
   const [saving, setSaving] = useState(false);
 
@@ -86,19 +90,9 @@ function Products() {
     }
 
     try {
-      setLoading(true);
-
-      const response = await api.get(
-        `/products?search=${encodeURIComponent(search)}`,
-      );
-
-      setProducts(response.data || []);
+      await dispatch(fetchProducts({ search, active: undefined }));
     } catch (error) {
       console.error("Failed to load products:", error);
-
-      setProducts([]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -113,7 +107,13 @@ function Products() {
 
     setCurrentPage(1);
 
-    loadProducts();
+    const timeoutId = setTimeout(() => {
+      loadProducts();
+    }, 300);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [search, canView]);
 
   // ==========================================
@@ -194,6 +194,7 @@ function Products() {
     try {
       await api.delete(`/products/${id}`);
 
+      dispatch(productActions.clearResource());
       await loadProducts();
 
       // Fix current page if last item was deleted
@@ -238,14 +239,16 @@ function Products() {
     setTogglingId(product._id);
 
     // Optimistic update
-    setProducts((prev) =>
-      prev.map((p) =>
+    dispatch(
+      productActions.setData(
+        products.map((p) =>
         p._id === product._id
           ? {
               ...p,
               active: newStatus,
             }
           : p,
+        ),
       ),
     );
 
@@ -258,14 +261,16 @@ function Products() {
       console.error("Failed to toggle status:", error);
 
       // Revert
-      setProducts((prev) =>
-        prev.map((p) =>
+      dispatch(
+        productActions.setData(
+          products.map((p) =>
           p._id === product._id
             ? {
                 ...p,
                 active: !newStatus,
               }
             : p,
+          ),
         ),
       );
 
@@ -336,7 +341,10 @@ function Products() {
           saving={saving}
           setSaving={setSaving}
           onReset={resetForm}
-          onSaved={loadProducts}
+          onSaved={() => {
+            dispatch(productActions.clearResource());
+            return loadProducts();
+          }}
           // NEW - PERMISSION PROPS
           canCreate={canCreate}
           canEdit={canEdit}

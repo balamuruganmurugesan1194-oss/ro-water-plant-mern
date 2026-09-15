@@ -1,6 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
 
 import roleReducer from "../features/roles/roleSlice";
+import {
+  expensesResource,
+  partiesResource,
+  productsResource,
+  salesResource,
+  usersResource,
+} from "./resourceSlice";
 
 // Keep your existing reducers
 // import productReducer from "../features/products/productSlice";
@@ -11,12 +18,11 @@ import roleReducer from "../features/roles/roleSlice";
 const store = configureStore({
   reducer: {
     roles: roleReducer,
-
-    // Keep your existing reducers here
-    // products: productReducer,
-    // sales: salesReducer,
-    // expenses: expenseReducer,
-    // parties: partyReducer,
+    products: productsResource.reducer,
+    parties: partiesResource.reducer,
+    sales: salesResource.reducer,
+    expenses: expensesResource.reducer,
+    users: usersResource.reducer,
   },
 });
 

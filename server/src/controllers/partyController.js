@@ -1,6 +1,7 @@
 import Party from "../models/Party.js";
 import Counter from "../models/Counter.js";
 import { getNextNumber } from "../utils/getNextNumber.js";
+import { getPagination, paginatedResponse } from "../utils/pagination.js";
 
 // ==========================================
 // GET PARTIES
@@ -11,7 +12,32 @@ export const getParties = async (req, res) => {
   try {
     const filter = req.query.type ? { type: req.query.type } : {};
 
-    const parties = await Party.find(filter).sort({ createdAt: -1 }).limit(500);
+    if (req.query.search?.trim()) {
+      const search = req.query.search.trim();
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { code: { $regex: search, $options: "i" } },
+        { contactNumber: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const query = Party.find(filter)
+      .select("type code name contactNumber address since notes createdAt")
+      .sort({ createdAt: -1 });
+
+    if (req.query.page || req.query.limit) {
+      const { page, limit, skip } = getPagination(req.query);
+      const [parties, total] = await Promise.all([
+        query.skip(skip).limit(limit).lean(),
+        Party.countDocuments(filter),
+      ]);
+
+      return res
+        .status(200)
+        .json(paginatedResponse(parties, total, page, limit));
+    }
+
+    const parties = await query.limit(500).lean();
 
     res.status(200).json(parties);
   } catch (error) {

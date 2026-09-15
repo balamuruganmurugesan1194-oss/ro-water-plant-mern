@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -6,6 +7,7 @@ import { today } from "../utils/helpers";
 
 import ExpenseForm from "../components/expenses/ExpenseForm";
 import ExpenseTable from "../components/expenses/ExpenseTable";
+import { expenseActions, fetchExpenses } from "../app/resourceSlice";
 
 const createBlankForm = () => ({
   date: today(),
@@ -16,6 +18,10 @@ const createBlankForm = () => ({
 });
 
 function Expenses() {
+  const dispatch = useDispatch();
+  const { data: items, error: loadError } = useSelector(
+    (state) => state.expenses,
+  );
   const { isSuperAdmin, permissions = [] } = useAuth();
 
   // ==========================================
@@ -38,8 +44,6 @@ function Expenses() {
   const canCreate = hasPermission("expenses.create");
   const canEdit = hasPermission("expenses.edit");
   const canDelete = hasPermission("expenses.delete");
-
-  const [items, setItems] = useState([]);
 
   const [month, setMonth] = useState(() => today().slice(0, 7));
 
@@ -93,13 +97,9 @@ function Expenses() {
     }
 
     try {
-      const response = await api.get(`/expenses?month=${month}`);
-
-      setItems(response.data || []);
+      await dispatch(fetchExpenses({ month }));
     } catch (err) {
       console.error("Failed to load expenses:", err);
-
-      setItems([]);
     }
   };
 
@@ -245,6 +245,7 @@ function Expenses() {
       // RELOAD
       // ======================================
 
+      dispatch(expenseActions.clearResource());
       await load();
 
       // ======================================
@@ -336,6 +337,7 @@ function Expenses() {
     try {
       await api.delete(`/expenses/${id}`);
 
+      dispatch(expenseActions.clearResource());
       await load();
 
       await loadNextExpenseNumber();

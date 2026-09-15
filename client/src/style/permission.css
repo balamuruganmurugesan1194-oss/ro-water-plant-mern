@@ -37,27 +37,54 @@
 }
 
 /* =========================================================
-   TABLE
+   PERMISSION TABLE WRAPPER
 ========================================================= */
 
 .permission-table-wrapper {
-  /* width: 100%;
-  overflow-x: auto;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px; */
-
   width: 100%;
   max-height: 350px;
-  overflow-y: auto;
+
   overflow-x: auto;
+  overflow-y: auto;
 
   border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #ffffff;
+
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+.permission-table-wrapper::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.permission-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.permission-table-wrapper::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 10px;
+}
+
+.permission-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
 
 .permission-table {
   width: 100%;
+  min-width: 650px;
+
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -67,8 +94,13 @@
 ========================================================= */
 
 .permission-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+
   padding: 11px 14px;
-  background: #b1cde9;
+
+  background: #f8fafc;
   border-bottom: 1px solid #e5e7eb;
 
   font-size: 13px;
@@ -76,22 +108,21 @@
   color: #374151;
 
   text-align: center;
+  white-space: nowrap;
 }
 
-/* Module */
+/* =========================================================
+   TABLE COLUMNS
+========================================================= */
 
 .permission-table .permission-module-column {
   width: 38%;
   text-align: left;
 }
 
-/* Row select */
-
 .permission-table .permission-select-column {
   width: 12%;
 }
-
-/* CRUD */
 
 .permission-table .permission-action-column {
   width: 12.5%;
@@ -107,6 +138,7 @@
   border-bottom: 1px solid #f1f5f9;
 
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .permission-table tbody tr:last-child td {
@@ -170,7 +202,6 @@
   grid-column: 1 / -1;
 
   display: grid;
-
   grid-template-columns: repeat(2, minmax(0, 1fr));
 
   gap: 16px;
@@ -182,33 +213,7 @@
   grid-column: 1 / -1;
 
   width: 100%;
-}
-
-/* =========================================================
-   MOBILE
-========================================================= */
-
-@media (max-width: 700px) {
-  .role-basic-fields {
-    grid-template-columns: 1fr;
-  }
-
-  .permission-table {
-    min-width: 700px;
-  }
-
-  .permission-matrix-head {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 10px;
-  }
-}
-/* =========================================================
-   ROLE BASIC FIELDS
-========================================================= */
-
-.role-basic-fields {
-  width: 100%;
+  margin-top: 4px;
 }
 
 /* =========================================================
@@ -219,6 +224,7 @@
   display: flex;
   align-items: flex-end;
   gap: 8px;
+
   width: 100%;
 }
 
@@ -226,10 +232,6 @@
   flex: 1;
   min-width: 0;
 }
-
-/* =========================================================
-   ARROW BUTTON
-========================================================= */
 
 .permission-arrow {
   width: 40px;
@@ -268,17 +270,10 @@
 
 .permission-arrow:focus {
   outline: none;
+
   border-color: #0284c7;
+
   box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
-}
-
-/* =========================================================
-   PERMISSION FIELD
-========================================================= */
-
-.role-permissions-field {
-  width: 100%;
-  margin-top: 4px;
 }
 
 /* =========================================================
@@ -287,26 +282,31 @@
 
 .error-text {
   display: block;
+
   margin-top: 4px;
 
   color: #dc2626;
-
   font-size: 12px;
 }
-
-/* =========================================================
-   INPUT ERROR
-========================================================= */
 
 .input-error {
   border-color: #dc2626 !important;
 }
 
 /* =========================================================
-   MOBILE
+   TABLET
 ========================================================= */
 
 @media (max-width: 768px) {
+  .role-form {
+    width: 100%;
+  }
+
+  .role-basic-fields {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
   .description-with-arrow {
     gap: 6px;
   }
@@ -314,5 +314,201 @@
   .permission-arrow {
     width: 38px;
     height: 38px;
+  }
+
+  .permission-table-wrapper {
+    max-height: 320px;
+  }
+
+  .permission-table {
+    min-width: 650px;
+  }
+
+  .permission-table thead th {
+    padding: 9px 10px;
+  }
+
+  .permission-table tbody td {
+    padding: 9px 10px;
+  }
+
+  .permission-matrix-head {
+    gap: 10px;
+  }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 480px) {
+  .role-form {
+    width: 100%;
+  }
+
+  .role-basic-fields {
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+    gap: 12px;
+  }
+
+  /* Description + arrow */
+  .description-with-arrow {
+    display: flex;
+    align-items: flex-end;
+
+    width: 100%;
+    gap: 6px;
+  }
+
+  .description-with-arrow label {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+  }
+
+  .permission-arrow {
+    width: 36px;
+    height: 36px;
+
+    flex-shrink: 0;
+  }
+
+  /* Permission section */
+  .role-permissions-field {
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  /* Permission heading */
+  .permission-matrix-head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 8px;
+
+    margin-bottom: 10px;
+  }
+
+  .permission-matrix-head h4 {
+    font-size: 14px;
+  }
+
+  .permission-select-all {
+    font-size: 12px;
+  }
+
+  /* Table scroll */
+  .permission-table-wrapper {
+    width: 100%;
+
+    max-height: 280px;
+
+    overflow-x: auto;
+    overflow-y: auto;
+
+    border-radius: 6px;
+
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Keep table wide enough for all columns */
+  .permission-table {
+    width: 650px;
+    min-width: 650px;
+
+    table-layout: fixed;
+  }
+
+  /* Table header */
+  .permission-table thead th {
+    padding: 8px;
+
+    font-size: 12px;
+  }
+
+  /* Table body */
+  .permission-table tbody td {
+    padding: 8px;
+
+    font-size: 12px;
+  }
+
+  /* Module column */
+  .permission-table .permission-module-column {
+    width: 38%;
+  }
+
+  /* Select column */
+  .permission-table .permission-select-column {
+    width: 12%;
+  }
+
+  /* CRUD columns */
+  .permission-table .permission-action-column {
+    width: 12.5%;
+  }
+
+  /* Checkbox */
+  .permission-checkbox-cell input {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Buttons */
+  .form-submit {
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+    gap: 8px;
+  }
+
+  .form-submit button {
+    width: 100%;
+
+    justify-content: center;
+  }
+}
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (max-width: 360px) {
+  .permission-table-wrapper {
+    max-height: 250px;
+  }
+
+  .permission-table {
+    width: 620px;
+    min-width: 620px;
+  }
+
+  .permission-table thead th {
+    padding: 7px 6px;
+    font-size: 11px;
+  }
+
+  .permission-table tbody td {
+    padding: 7px 6px;
+    font-size: 11px;
+  }
+
+  .permission-arrow {
+    width: 34px;
+    height: 34px;
+  }
+
+  .permission-matrix-head h4 {
+    font-size: 13px;
+  }
+
+  .permission-select-all {
+    font-size: 11px;
   }
 }

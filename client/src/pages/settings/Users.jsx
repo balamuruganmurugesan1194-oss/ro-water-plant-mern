@@ -2,12 +2,14 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 import api from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 
 import UserForm from "../../components/users/UserForm";
 import UserTable from "../../components/users/UserTable";
+import { fetchUsers, userActions } from "../../app/resourceSlice";
 
 const createBlankForm = () => ({
   name: "",
@@ -17,6 +19,10 @@ const createBlankForm = () => ({
 });
 
 function Users() {
+  const dispatch = useDispatch();
+  const { data: items, error: loadError } = useSelector(
+    (state) => state.users,
+  );
   const {
     isSuperAdmin,
     permissions = [],
@@ -58,9 +64,6 @@ function Users() {
   // STATE
   // ==========================================
 
-  const [items, setItems] =
-    useState([]);
-
   const [roles, setRoles] =
     useState([]);
 
@@ -98,26 +101,12 @@ function Users() {
     }
 
     try {
-      const response =
-        await api.get(
-          "/settings/users"
-        );
-
-      setItems(
-        Array.isArray(
-          response.data
-        )
-          ? response.data
-          : response.data?.users ||
-              []
-      );
+      await dispatch(fetchUsers({}));
     } catch (err) {
       console.error(
         "Failed to load users:",
         err
       );
-
-      setItems([]);
 
       alert(
         err?.response?.data
@@ -417,6 +406,7 @@ function Users() {
       // RELOAD
       // ======================================
 
+      dispatch(userActions.clearResource());
       await load();
 
       if (canCreate || canEdit) {
@@ -519,6 +509,7 @@ function Users() {
         "User deleted successfully."
       );
 
+      dispatch(userActions.clearResource());
       await load();
 
       const remainingItems =
@@ -595,8 +586,9 @@ function Users() {
       // OPTIMISTIC UPDATE
       // ======================================
 
-      setItems((previous) =>
-        previous.map((user) =>
+      dispatch(
+        userActions.setData(
+          items.map((user) =>
           user._id === item._id
             ? {
                 ...user,
@@ -604,7 +596,8 @@ function Users() {
                   newStatus,
               }
             : user
-        )
+          ),
+        ),
       );
 
       try {
@@ -628,9 +621,9 @@ function Users() {
         if (
           response.data?.user
         ) {
-          setItems(
-            (previous) =>
-              previous.map(
+          dispatch(
+            userActions.setData(
+              items.map(
                 (user) =>
                   user._id ===
                   response.data
@@ -638,7 +631,8 @@ function Users() {
                     ? response.data
                         .user
                     : user
-              )
+              ),
+            ),
           );
         }
 
@@ -657,8 +651,9 @@ function Users() {
         // ROLLBACK
         // ====================================
 
-        setItems((previous) =>
-          previous.map((user) =>
+        dispatch(
+          userActions.setData(
+            items.map((user) =>
             user._id ===
             item._id
               ? {
@@ -667,7 +662,8 @@ function Users() {
                     item.isActive,
                 }
               : user
-          )
+            ),
+          ),
         );
 
         alert(

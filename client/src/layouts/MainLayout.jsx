@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ShoppingCart,
   Package,
+  Boxes,
   Receipt,
   Users,
   LogOut,
@@ -17,6 +18,8 @@ import {
   ShieldCheck,
   Building2,
   FileText,
+  BarChart3,
+  ClipboardList,
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
@@ -60,6 +63,7 @@ const NAV_ITEMS = [
     icon: Receipt,
     permission: "expenses.view",
   },
+
 ];
 
 // ======================================================
@@ -124,6 +128,36 @@ const SETTINGS_ITEMS = [
   // },
 ];
 
+const REPORT_ITEMS = [
+  ["sales", "Sales Report"],
+  ["purchases", "Purchase Report"],
+  ["expenses", "Expense Report"],
+  ["profit-loss", "Profit / Loss"],
+  ["stock", "Stock Report"],
+  ["customer-outstanding", "Customer Outstanding"],
+  ["supplier-outstanding", "Supplier Outstanding"],
+  ["daily-collection", "Daily Collection"],
+];
+
+const INVENTORY_ITEMS = [
+  ["summary", "Stock Summary"],
+  ["opening", "Opening Stock"],
+  ["adjustment", "Stock Adjustment"],
+];
+
+const OPERATION_ITEMS = [
+  ["purchases", "Purchases"],
+  ["production", "Production"],
+  ["deliveries", "Deliveries"],
+  ["jars", "Empty Jars"],
+  ["payments", "Payments"],
+  ["customer-outstanding", "Customer Outstanding"],
+  ["supplier-outstanding", "Supplier Outstanding"],
+];
+
+const getQueryEntryLabel = (items, key, fallback) =>
+  items.find(([itemKey]) => itemKey === key)?.[1] || fallback;
+
 function MainLayout() {
   const { user, logout, isSuperAdmin, permissions = [] } = useAuth();
 
@@ -135,6 +169,18 @@ function MainLayout() {
 
   const [settingsOpen, setSettingsOpen] = useState(
     location.pathname.startsWith("/settings"),
+  );
+
+  const [reportsOpen, setReportsOpen] = useState(
+    location.pathname.startsWith("/reports"),
+  );
+
+  const [inventoryOpen, setInventoryOpen] = useState(
+    location.pathname.startsWith("/inventory"),
+  );
+
+  const [operationsOpen, setOperationsOpen] = useState(
+    location.pathname.startsWith("/operations"),
   );
 
   // ======================================================
@@ -177,6 +223,10 @@ function MainLayout() {
     permissions.includes("*") ||
     visibleSettingsItems.length > 0;
 
+  const canAccessReports = hasPermission("dashboard.view");
+  const canAccessInventory = hasPermission("products.view");
+  const canAccessOperations = hasPermission("products.view");
+
   // ======================================================
   // CURRENT PAGE LABEL
   // ======================================================
@@ -192,7 +242,28 @@ function MainLayout() {
   const currentLabel =
     currentSettingsItem?.label ||
     currentNavItem?.label ||
-    (location.pathname === "/settings" ? "Settings" : "Dashboard");
+    (location.pathname.startsWith("/reports")
+      ? getQueryEntryLabel(
+          REPORT_ITEMS,
+          location.pathname.split("/")[2],
+          "Reports",
+        )
+      : location.pathname === "/inventory"
+        ? getQueryEntryLabel(
+            INVENTORY_ITEMS,
+            new URLSearchParams(location.search).get("tab"),
+            "Inventory",
+          )
+        : location.pathname.startsWith("/operations")
+          ? getQueryEntryLabel(
+              OPERATION_ITEMS,
+              location.pathname.split("/")[2] ||
+                new URLSearchParams(location.search).get("tab"),
+              "Operations",
+            )
+          : location.pathname === "/settings"
+            ? "Settings"
+            : "Dashboard");
 
   // ======================================================
   // DISPLAY ROLE
@@ -244,6 +315,65 @@ function MainLayout() {
             </NavLink>
           ))}
 
+          {canAccessInventory && (
+            <div className="settings-menu">
+              <button type="button" className={`nav settings-parent ${location.pathname.startsWith("/inventory") ? "active" : ""}`} onClick={() => setInventoryOpen((prev) => !prev)}>
+                <Boxes size={19} /><span>Inventory</span><ChevronDown size={16} className={inventoryOpen ? "settings-arrow open" : "settings-arrow"} />
+              </button>
+              {inventoryOpen && <div className="settings-submenu">
+                {INVENTORY_ITEMS.map(([key, label]) => <NavLink key={key} to={`/inventory/${key}`} className={location.pathname === `/inventory/${key}` ? "settings-subnav active" : "settings-subnav"}><span>{label}</span></NavLink>)}
+              </div>}
+            </div>
+          )}
+
+          {canAccessOperations && (
+            <div className="settings-menu">
+              <button type="button" className={`nav settings-parent ${location.pathname.startsWith("/operations") ? "active" : ""}`} onClick={() => setOperationsOpen((prev) => !prev)}>
+                <ClipboardList size={19} /><span>Operations</span><ChevronDown size={16} className={operationsOpen ? "settings-arrow open" : "settings-arrow"} />
+              </button>
+              {operationsOpen && <div className="settings-submenu">
+                {OPERATION_ITEMS.map(([key, label]) => <NavLink key={key} to={`/operations/${key}`} className={location.pathname.startsWith(`/operations/${key}`) ? "settings-subnav active" : "settings-subnav"}><span>{label}</span></NavLink>)}
+              </div>}
+            </div>
+          )}
+
+          {canAccessReports && (
+            <div className="settings-menu">
+              <button
+                type="button"
+                className={`nav settings-parent ${
+                  location.pathname.startsWith("/reports") ? "active" : ""
+                }`}
+                onClick={() => setReportsOpen((prev) => !prev)}
+              >
+                <BarChart3 size={19} />
+                <span>Reports</span>
+                <ChevronDown
+                  size={16}
+                  className={reportsOpen ? "settings-arrow open" : "settings-arrow"}
+                />
+              </button>
+
+              {reportsOpen && (
+                <div className="settings-submenu">
+                  {REPORT_ITEMS.map(([key, label]) => (
+                    <NavLink
+                      key={key}
+                      to={`/reports/${key}`}
+                      className={({ isActive }) =>
+                        location.pathname === `/reports/${key}`
+                          ? "settings-subnav active"
+                          : "settings-subnav"
+                      }
+                    >
+                      <span>{label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* =================================================
               SETTINGS
           ================================================= */}
@@ -294,15 +424,6 @@ function MainLayout() {
           )}
         </nav>
 
-        {/* =================================================
-            LOGOUT
-        ================================================= */}
-
-        <button type="button" className="nav logout" onClick={logout}>
-          <LogOut size={19} />
-
-          <span>Logout</span>
-        </button>
       </aside>
 
       {/* =====================================================
@@ -319,7 +440,19 @@ function MainLayout() {
             <p>2026 RO Water Plant Management</p>
           </div>
 
-          <span className="role">{displayRole.toUpperCase()}</span>
+          <div className="topbar-actions">
+            <span className="role">{displayRole.toUpperCase()}</span>
+
+            <button
+              type="button"
+              className="topbar-logout"
+              onClick={logout}
+              title="Logout"
+            >
+              <LogOut size={17} />
+              <span>Logout</span>
+            </button>
+          </div>
         </header>
 
         {/* PAGE CONTENT */}

@@ -1,6 +1,7 @@
 import Expense from "../models/Expense.js";
 import Counter from "../models/Counter.js";
 import { getNextNumber } from "../utils/getNextNumber.js";
+import { getPagination, paginatedResponse } from "../utils/pagination.js";
 
 // ==========================================
 // GET EXPENSES
@@ -18,6 +19,15 @@ export const getExpenses = async (req, res) => {
       filter.category = category;
     }
 
+    if (req.query.search?.trim()) {
+      const search = req.query.search.trim();
+      filter.$or = [
+        { expenseNumber: { $regex: search, $options: "i" } },
+        { category: { $regex: search, $options: "i" } },
+        { vendor: { $regex: search, $options: "i" } },
+      ];
+    }
+
     // Month filter
     if (month) {
       const [year, m] = month.split("-").map(Number);
@@ -28,9 +38,23 @@ export const getExpenses = async (req, res) => {
       };
     }
 
-    const expenses = await Expense.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(500);
+    const query = Expense.find(filter)
+      .select("expenseNumber amount date category vendor notes createdAt")
+      .sort({ createdAt: -1 });
+
+    if (req.query.page || req.query.limit) {
+      const { page, limit, skip } = getPagination(req.query);
+      const [expenses, total] = await Promise.all([
+        query.skip(skip).limit(limit).lean(),
+        Expense.countDocuments(filter),
+      ]);
+
+      return res
+        .status(200)
+        .json(paginatedResponse(expenses, total, page, limit));
+    }
+
+    const expenses = await query.limit(500).lean();
 
     res.status(200).json(expenses);
   } catch (error) {

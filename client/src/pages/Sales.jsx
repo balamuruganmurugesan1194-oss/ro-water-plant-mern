@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 import api from "../api/client";
 import { today } from "../utils/helpers";
@@ -7,8 +8,26 @@ import { useAuth } from "../context/AuthContext";
 import SalesForm from "../components/sales/SalesForm";
 import SalesRegister from "../components/sales/SalesRegister";
 import SaleDetailsModal from "../components/sales/SaleDetailsModal";
+import {
+  fetchParties,
+  fetchProducts,
+  fetchSales,
+  saleActions,
+} from "../app/resourceSlice";
 
 function Sales() {
+  const dispatch = useDispatch();
+  const productsState = useSelector((state) => state.products);
+  const partiesState = useSelector((state) => state.parties);
+  const salesState = useSelector((state) => state.sales);
+  const products = productsState.data;
+  const customers = partiesState.data.filter(
+    (party) => party.type === "customer",
+  );
+  const suppliers = partiesState.data.filter(
+    (party) => party.type === "supplier",
+  );
+  const sales = salesState.data;
   // ==========================================
   // AUTH / PERMISSIONS
   // ==========================================
@@ -39,23 +58,11 @@ function Sales() {
   // STATE
   // ==========================================
 
-  const [sales, setSales] = useState([]);
-
-  const [products, setProducts] = useState([]);
-
-  const [customers, setCustomers] = useState([]);
-
-  const [suppliers, setSuppliers] = useState([]);
-
   const [type, setType] = useState("retail");
 
   const [month, setMonth] = useState(() => today().slice(0, 7));
 
   const [search, setSearch] = useState("");
-
-  const [loading, setLoading] = useState(false);
-
-  const [productsLoading, setProductsLoading] = useState(false);
 
   const [saving, setSaving] = useState(false);
 
@@ -132,29 +139,13 @@ function Sales() {
 
   const loadParties = async () => {
     if (!canCreate) {
-      setCustomers([]);
-      setSuppliers([]);
       return;
     }
 
     try {
-      const response = await api.get("/parties");
-
-      const data = response.data?.data || response.data || [];
-
-      const customerList = data.filter((party) => party.type === "customer");
-
-      const supplierList = data.filter((party) => party.type === "supplier");
-
-      setCustomers(customerList);
-
-      setSuppliers(supplierList);
+      await dispatch(fetchParties({}));
     } catch (error) {
       console.error("Failed to load parties:", error);
-
-      setCustomers([]);
-
-      setSuppliers([]);
     }
   };
 
@@ -164,22 +155,13 @@ function Sales() {
 
   const loadProducts = async () => {
     if (!canCreate) {
-      setProducts([]);
       return;
     }
 
     try {
-      setProductsLoading(true);
-
-      const response = await api.get("/products?active=true");
-
-      setProducts(response.data || []);
+      await dispatch(fetchProducts({ active: true }));
     } catch (error) {
       console.error("Failed to load products:", error);
-
-      setProducts([]);
-    } finally {
-      setProductsLoading(false);
     }
   };
 
@@ -189,26 +171,21 @@ function Sales() {
 
   const loadSales = async (searchValue = search) => {
     if (!canView) {
-      setSales([]);
       return;
     }
 
     try {
-      setLoading(true);
-
-      const response = await api.get(
-        `/sales?month=${month}&type=${type}&search=${encodeURIComponent(
-          searchValue,
-        )}`,
+      await dispatch(
+        fetchSales({
+          month,
+          type,
+          search: searchValue,
+          page: currentPage,
+          limit: itemsPerPage,
+        }),
       );
-
-      setSales(response.data || []);
     } catch (error) {
       console.error("Failed to load sales:", error);
-
-      setSales([]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -273,6 +250,12 @@ function Sales() {
 
     return () => clearTimeout(throttleTimeoutRef.current);
   }, [search, canView]);
+
+  useEffect(() => {
+    if (canView) {
+      loadSales(search);
+    }
+  }, [currentPage, itemsPerPage]);
 
   // ==========================================
   // TYPE CHANGE
@@ -391,6 +374,7 @@ function Sales() {
       // RELOAD SALES
       // ========================================
 
+      dispatch(saleActions.clearResource());
       await loadSales(search);
 
       // ========================================
@@ -422,6 +406,7 @@ function Sales() {
       await api.delete(`/sales/${id}`);
 
       // Reload after soft delete
+      dispatch(saleActions.clearResource());
       await loadSales(search);
 
       setCurrentPage((page) => {
@@ -446,11 +431,9 @@ function Sales() {
   // PAGINATION
   // ==========================================
 
-  const totalPages = Math.ceil(sales.length / itemsPerPage);
+  const totalPages = salesState.pagination?.totalPages || 0;
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
-
-  const paginatedSales = sales.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedSales = sales;
 
   // ==========================================
   // NO VIEW PERMISSION
@@ -487,7 +470,7 @@ function Sales() {
           errors={errors}
           setErrors={setErrors}
           products={products}
-          productsLoading={productsLoading}
+          productsLoading={productsState.loading}
           saving={saving}
           onSave={handleSaveSale}
           customers={customers}
@@ -504,13 +487,13 @@ function Sales() {
       <SalesRegister
         sales={paginatedSales}
         allSales={sales}
-        loading={loading}
+        loading={salesState.loading}
         month={month}
         type={type}
         search={search}
         currentPage={currentPage}
         totalPages={totalPages}
-        totalItems={sales.length}
+        totalItems={salesState.pagination?.total || sales.length}
         itemsPerPage={itemsPerPage}
         canEdit={canEdit}
         canDelete={canDelete}

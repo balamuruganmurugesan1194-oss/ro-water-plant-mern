@@ -101,6 +101,12 @@ const saleSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
+    paidAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     // ==========================================
     // NOTES
     // ==========================================

@@ -58,6 +58,34 @@ header p {
   font-weight: 700;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  height: 36px;
+  padding: 0 10px;
+
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+
+  background: var(--surface);
+  color: var(--text-secondary);
+
+  cursor: pointer;
+}
+
+.topbar-logout:hover {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+
 /* =========================================================
    PANEL HEADER
 ========================================================= */
@@ -73,6 +101,11 @@ header p {
   gap: 16px;
 
   margin-bottom: 14px;
+}
+
+.panel-head > .filters {
+  margin-left: auto;
+  justify-content: flex-end;
 }
 
 .panel-head h3 {

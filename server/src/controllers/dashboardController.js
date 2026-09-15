@@ -30,27 +30,46 @@ export const getDashboard = async (req, res) => {
 
     const end = new Date(year + 1, 0, 1);
 
-    // ======================================
-    // GET SALES
-    // ======================================
-
-    const sales = await Sale.find({
-      date: {
-        $gte: start,
-        $lt: end,
-      },
-    }).lean();
-
-    // ======================================
-    // GET EXPENSES
-    // ======================================
-
-    const expenses = await Expense.find({
-      date: {
-        $gte: start,
-        $lt: end,
-      },
-    }).lean();
+    // Aggregate only the values needed by the dashboard instead of loading
+    // every sale and expense document into the Node.js process.
+    const [salesSummary, expenseSummary] = await Promise.all([
+      Sale.aggregate([
+        {
+          $match: {
+            date: { $gte: start, $lt: end },
+            isDeleted: false,
+          },
+        },
+        {
+          $group: {
+            _id: { month: { $month: "$date" }, type: "$type" },
+            amount: { $sum: "$amount" },
+            pendingReceivables: {
+              $sum: {
+                $cond: [
+                  { $ne: [{ $toLower: "$paymentStatus" }, "paid"] },
+                  "$amount",
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      ]),
+      Expense.aggregate([
+        {
+          $match: {
+            date: { $gte: start, $lt: end },
+          },
+        },
+        {
+          $group: {
+            _id: { month: { $month: "$date" } },
+            amount: { $sum: "$amount" },
+          },
+        },
+      ]),
+    ]);
 
     // ======================================
     // MONTHLY DATA
@@ -78,56 +97,20 @@ export const getDashboard = async (req, res) => {
       margin: 0,
     }));
 
-    // ======================================
-    // PROCESS SALES
-    // ======================================
-
-    for (const sale of sales) {
-      if (!sale.date) {
-        continue;
-      }
-
-      const date = new Date(sale.date);
-
-      const monthIndex = date.getMonth();
-
-      if (monthIndex < 0 || monthIndex > 11) {
-        continue;
-      }
-
-      const amount = Number(sale.amount) || 0;
+    for (const summary of salesSummary) {
+      const monthIndex = summary._id.month - 1;
+      const saleType = String(summary._id.type || "").toLowerCase();
+      const amount = Number(summary.amount) || 0;
 
       monthly[monthIndex].revenue += amount;
-
-      // ====================================
-      // SALE TYPE
-      // ====================================
-
-      const saleType = String(sale.type || "").toLowerCase();
 
       if (["retail", "supplier", "other"].includes(saleType)) {
         monthly[monthIndex][saleType] += amount;
       }
     }
 
-    // ======================================
-    // PROCESS EXPENSES
-    // ======================================
-
-    for (const expense of expenses) {
-      if (!expense.date) {
-        continue;
-      }
-
-      const date = new Date(expense.date);
-
-      const monthIndex = date.getMonth();
-
-      if (monthIndex < 0 || monthIndex > 11) {
-        continue;
-      }
-
-      monthly[monthIndex].expenses += Number(expense.amount) || 0;
+    for (const summary of expenseSummary) {
+      monthly[summary._id.month - 1].expenses += Number(summary.amount) || 0;
     }
 
     // ======================================
@@ -166,15 +149,10 @@ export const getDashboard = async (req, res) => {
     // PENDING RECEIVABLES
     // ======================================
 
-    const pendingReceivables = sales
-      .filter((sale) => {
-        const status = String(sale.paymentStatus || "").toLowerCase();
-
-        return status !== "paid";
-      })
-      .reduce((total, sale) => {
-        return total + (Number(sale.amount) || 0);
-      }, 0);
+    const pendingReceivables = salesSummary.reduce(
+      (total, summary) => total + (Number(summary.pendingReceivables) || 0),
+      0,
+    );
 
     // ======================================
     // PROFIT MARGIN
