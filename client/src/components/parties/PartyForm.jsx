@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Pencil, X } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 import api from "../../api/client";
 
@@ -45,6 +46,10 @@ function PartyForm({
       }));
     } catch (error) {
       console.error("FAILED TO FETCH PARTY CODE:", error);
+
+      toast.error(
+        error?.response?.data?.message || "Failed to generate party code",
+      );
     } finally {
       setLoadingCode(false);
     }
@@ -124,13 +129,13 @@ function PartyForm({
     // ========================================
 
     if (editing && !canEdit) {
-      alert("You do not have permission to edit parties.");
+      toast.error("You do not have permission to edit parties.");
 
       return;
     }
 
     if (!editing && !canCreate) {
-      alert("You do not have permission to create parties.");
+      toast.error("You do not have permission to create parties.");
 
       return;
     }
@@ -140,6 +145,7 @@ function PartyForm({
     // ========================================
 
     if (!validate()) {
+      toast.error("Please fix the highlighted fields.");
       return;
     }
 

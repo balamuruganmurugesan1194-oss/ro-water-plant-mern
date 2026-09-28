@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-hot-toast";
 
 import api from "../api/client";
 import { today } from "../utils/helpers";
@@ -8,6 +9,7 @@ import { useAuth } from "../context/AuthContext";
 import SalesForm from "../components/sales/SalesForm";
 import SalesRegister from "../components/sales/SalesRegister";
 import SaleDetailsModal from "../components/sales/SaleDetailsModal";
+
 import {
   fetchParties,
   fetchProducts,
@@ -17,17 +19,23 @@ import {
 
 function Sales() {
   const dispatch = useDispatch();
+
   const productsState = useSelector((state) => state.products);
   const partiesState = useSelector((state) => state.parties);
   const salesState = useSelector((state) => state.sales);
+
   const products = productsState.data;
+
   const customers = partiesState.data.filter(
     (party) => party.type === "customer",
   );
+
   const suppliers = partiesState.data.filter(
     (party) => party.type === "supplier",
   );
+
   const sales = salesState.data;
+
   // ==========================================
   // AUTH / PERMISSIONS
   // ==========================================
@@ -47,11 +55,8 @@ function Sales() {
   };
 
   const canView = hasPermission("sales.view");
-
   const canCreate = hasPermission("sales.create");
-
   const canEdit = hasPermission("sales.edit");
-
   const canDelete = hasPermission("sales.delete");
 
   // ==========================================
@@ -88,21 +93,12 @@ function Sales() {
 
   const createBlankForm = () => ({
     date: today(),
-
-    // Customer / Supplier ID
     partyId: "",
-
-    // Customer / Supplier / Other name
     partyName: "",
-
     items: [],
-
     paymentMode: "Cash",
-
     paymentStatus: "Paid",
-
     notes: "",
-
     amount: 0,
   });
 
@@ -130,6 +126,10 @@ function Sales() {
       console.error("Failed to load next sale number:", error);
 
       setSaleNumber("");
+
+      toast.error(
+        error?.response?.data?.message || "Failed to load next sale number",
+      );
     }
   };
 
@@ -146,6 +146,8 @@ function Sales() {
       await dispatch(fetchParties({}));
     } catch (error) {
       console.error("Failed to load parties:", error);
+
+      toast.error(error?.response?.data?.message || "Failed to load parties");
     }
   };
 
@@ -162,6 +164,8 @@ function Sales() {
       await dispatch(fetchProducts({ active: true }));
     } catch (error) {
       console.error("Failed to load products:", error);
+
+      toast.error(error?.response?.data?.message || "Failed to load products");
     }
   };
 
@@ -186,6 +190,8 @@ function Sales() {
       );
     } catch (error) {
       console.error("Failed to load sales:", error);
+
+      toast.error(error?.response?.data?.message || "Failed to load sales");
     }
   };
 
@@ -202,9 +208,7 @@ function Sales() {
 
     if (canCreate) {
       loadProducts();
-
       loadParties();
-
       loadNextSaleNumber();
     }
   }, [canView, canCreate]);
@@ -269,9 +273,6 @@ function Sales() {
     setCurrentPage(1);
 
     setForm(createBlankForm());
-
-    // Keep current counter preview.
-    // Sale number is independent of type.
   };
 
   // ==========================================
@@ -280,7 +281,7 @@ function Sales() {
 
   const handleSaveSale = async (saleForm) => {
     if (!canCreate) {
-      alert("You do not have permission to create sales.");
+      toast.error("You do not have permission to create sales.");
 
       return;
     }
@@ -294,11 +295,8 @@ function Sales() {
 
       const items = saleForm.items.map((item) => ({
         product: item.product,
-
         quantity: Number(item.quantity),
-
         rate: Number(item.rate),
-
         amount: Number(item.quantity) * Number(item.rate),
       }));
 
@@ -318,47 +316,40 @@ function Sales() {
       const payload = {
         date: saleForm.date,
 
-        // =====================================
         // PARTY
-        // =====================================
-
         partyId: saleForm.partyId || null,
 
         partyName: saleForm.partyName?.trim() || "",
 
         type,
 
-        // =====================================
         // PRODUCTS
-        // =====================================
-
         items,
 
         amount: totalAmount,
 
-        // =====================================
         // PAYMENT
-        // =====================================
-
         paymentMode: saleForm.paymentMode,
 
         paymentStatus: saleForm.paymentStatus,
 
-        // =====================================
         // NOTES
-        // =====================================
-
         notes: saleForm.notes?.trim() || "",
       };
 
       // ========================================
-      // DO NOT SEND SALE NUMBER
-      // BACKEND GENERATES IT
+      // BACKEND GENERATES SALE NUMBER
       // ========================================
 
       const response = await api.post("/sales", payload);
 
       console.log("Sale created:", response.data);
+
+      // ========================================
+      // SUCCESS TOAST
+      // ========================================
+
+      toast.success("Sale saved successfully");
 
       // ========================================
       // RESET FORM
@@ -375,6 +366,7 @@ function Sales() {
       // ========================================
 
       dispatch(saleActions.clearResource());
+
       await loadSales(search);
 
       // ========================================
@@ -385,7 +377,7 @@ function Sales() {
     } catch (error) {
       console.error("Failed to save sale:", error);
 
-      alert(error?.response?.data?.message || "Failed to save sale");
+      toast.error(error?.response?.data?.message || "Failed to save sale");
     } finally {
       setSaving(false);
     }
@@ -397,7 +389,7 @@ function Sales() {
 
   const handleDelete = async (id) => {
     if (!canDelete) {
-      alert("You do not have permission to delete sales.");
+      toast.error("You do not have permission to delete sales.");
 
       return;
     }
@@ -407,7 +399,14 @@ function Sales() {
 
       // Reload after soft delete
       dispatch(saleActions.clearResource());
+
       await loadSales(search);
+
+      // ========================================
+      // SUCCESS TOAST
+      // ========================================
+
+      toast.success("Sale deleted successfully");
 
       setCurrentPage((page) => {
         const remainingItems = Math.max(sales.length - 1, 0);
@@ -423,7 +422,7 @@ function Sales() {
     } catch (error) {
       console.error("Failed to delete sale:", error);
 
-      alert(error?.response?.data?.message || "Failed to delete sale");
+      toast.error(error?.response?.data?.message || "Failed to delete sale");
     }
   };
 
@@ -502,7 +501,6 @@ function Sales() {
         onPageChange={setCurrentPage}
         onItemsPerPageChange={(value) => {
           setItemsPerPage(value);
-
           setCurrentPage(1);
         }}
         onDelete={handleDelete}

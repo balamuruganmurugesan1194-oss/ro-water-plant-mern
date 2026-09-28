@@ -1,10 +1,17 @@
 import React, { useEffect, useState } from "react";
+
 import { useDispatch, useSelector } from "react-redux";
+
+import toast from "react-hot-toast";
+
 import { useAuth } from "../context/AuthContext";
+
 import api from "../api/client";
+
 import { fetchProducts, productActions } from "../app/resourceSlice";
 
 import ProductForm from "../components/products/ProductForm";
+
 import ProductTable from "../components/products/ProductTable";
 
 // ==========================================
@@ -27,11 +34,13 @@ const createBlankProduct = () => ({
 
 function Products() {
   const dispatch = useDispatch();
+
   const {
     data: products,
     loading,
     error: loadError,
   } = useSelector((state) => state.products);
+
   // ==========================================
   // AUTH / PERMISSIONS
   // ==========================================
@@ -51,7 +60,9 @@ function Products() {
   };
 
   const canCreate = hasPermission("products.create");
+
   const canEdit = hasPermission("products.edit");
+
   const canDelete = hasPermission("products.delete");
 
   const canView = hasPermission("products.view");
@@ -90,14 +101,21 @@ function Products() {
     }
 
     try {
-      await dispatch(fetchProducts({ search, active: undefined }));
+      await dispatch(
+        fetchProducts({
+          search,
+          active: undefined,
+        }),
+      );
     } catch (error) {
       console.error("Failed to load products:", error);
+
+      toast.error("Failed to load products.");
     }
   };
 
   // ==========================================
-  // LOAD PRODUCTS WHEN SEARCH CHANGES
+  // SEARCH
   // ==========================================
 
   useEffect(() => {
@@ -148,7 +166,7 @@ function Products() {
 
   const handleEdit = (product) => {
     if (!canEdit) {
-      alert("You do not have permission to edit products.");
+      toast.error("You do not have permission to edit products.");
 
       return;
     }
@@ -173,7 +191,6 @@ function Products() {
 
     setErrors({});
 
-    // Scroll to top
     window.scrollTo({
       top: 0,
       behavior: "smooth",
@@ -186,7 +203,7 @@ function Products() {
 
   const deleteProduct = async (id) => {
     if (!canDelete) {
-      alert("You do not have permission to delete products.");
+      toast.error("You do not have permission to delete products.");
 
       return;
     }
@@ -195,9 +212,13 @@ function Products() {
       await api.delete(`/products/${id}`);
 
       dispatch(productActions.clearResource());
+
       await loadProducts();
 
-      // Fix current page if last item was deleted
+      // ======================================
+      // FIX CURRENT PAGE
+      // ======================================
+
       const remainingItems = products.length - 1;
 
       const newTotalPages = Math.ceil(remainingItems / itemsPerPage);
@@ -205,10 +226,14 @@ function Products() {
       if (currentPage > newTotalPages && newTotalPages > 0) {
         setCurrentPage(newTotalPages);
       }
+
+      toast.success("Product deleted successfully.");
     } catch (error) {
       console.error("Failed to delete product:", error);
 
-      alert(error?.response?.data?.message || "Failed to delete product");
+      toast.error(
+        error?.response?.data?.message || "Failed to delete product.",
+      );
     }
   };
 
@@ -218,36 +243,34 @@ function Products() {
 
   const handleToggleActive = async (product) => {
     if (!canEdit) {
-      alert("You do not have permission to edit products.");
+      toast.error("You do not have permission to edit products.");
 
       return;
     }
 
     const newStatus = !product.active;
 
-    // Confirm only when deactivating
-    if (!newStatus) {
-      const confirmed = window.confirm(
-        `Deactivate "${product.name}"? It will no longer be available for new orders.`,
-      );
-
-      if (!confirmed) {
-        return;
-      }
-    }
+    /*
+     *
+     * The status change is handled directly.
+     * A toast confirms the result.
+     */
 
     setTogglingId(product._id);
 
-    // Optimistic update
+    // ========================================
+    // OPTIMISTIC UPDATE
+    // ========================================
+
     dispatch(
       productActions.setData(
         products.map((p) =>
-        p._id === product._id
-          ? {
-              ...p,
-              active: newStatus,
-            }
-          : p,
+          p._id === product._id
+            ? {
+                ...p,
+                active: newStatus,
+              }
+            : p,
         ),
       ),
     );
@@ -257,24 +280,33 @@ function Products() {
         ...product,
         active: newStatus,
       });
+
+      toast.success(
+        newStatus
+          ? `"${product.name}" activated successfully.`
+          : `"${product.name}" deactivated successfully.`,
+      );
     } catch (error) {
       console.error("Failed to toggle status:", error);
 
-      // Revert
+      // ======================================
+      // REVERT
+      // ======================================
+
       dispatch(
         productActions.setData(
           products.map((p) =>
-          p._id === product._id
-            ? {
-                ...p,
-                active: !newStatus,
-              }
-            : p,
+            p._id === product._id
+              ? {
+                  ...p,
+                  active: !newStatus,
+                }
+              : p,
           ),
         ),
       );
 
-      alert(
+      toast.error(
         error?.response?.data?.message || "Could not update product status.",
       );
     } finally {
@@ -341,11 +373,11 @@ function Products() {
           saving={saving}
           setSaving={setSaving}
           onReset={resetForm}
-          onSaved={() => {
+          onSaved={async () => {
             dispatch(productActions.clearResource());
+
             return loadProducts();
           }}
-          // NEW - PERMISSION PROPS
           canCreate={canCreate}
           canEdit={canEdit}
         />
@@ -361,7 +393,6 @@ function Products() {
         loading={loading}
         search={search}
         onSearchChange={setSearch}
-        // NEW - SEPARATE PERMISSIONS
         canEdit={canEdit}
         canDelete={canDelete}
         togglingId={togglingId}

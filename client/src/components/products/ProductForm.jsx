@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 
 import { Plus } from "lucide-react";
 
+import toast from "react-hot-toast";
+
 import api from "../../api/client";
 
 import SearchableSelect from "../common/SearchableSelect";
@@ -49,6 +51,12 @@ function ProductForm({
       console.error("GET PRODUCT CODE ERROR:", error);
 
       setGeneratedCode("");
+
+      toast.error(
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          "Unable to generate product code",
+      );
     } finally {
       setLoadingCode(false);
     }
@@ -139,6 +147,8 @@ function ProductForm({
         name: "Product name already exists",
       }));
 
+      toast.error("Product name already exists.");
+
       return false;
     }
 
@@ -152,34 +162,47 @@ function ProductForm({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Keep the original state before reset
+    const wasEditing = Boolean(editingId);
+
     // ========================================
     // PERMISSION CHECK
     // ========================================
 
-    if (editingId && !canEdit) {
-      alert("You do not have permission to edit products.");
+    if (wasEditing && !canEdit) {
+      toast.error("You do not have permission to edit products.");
 
       return;
     }
 
-    if (!editingId && !canCreate) {
-      alert("You do not have permission to create products.");
+    if (!wasEditing && !canCreate) {
+      toast.error("You do not have permission to create products.");
 
       return;
     }
+
+    // ========================================
+    // CLEAR ERRORS
+    // ========================================
 
     setErrors({});
 
+    // ========================================
+    // VALIDATE
+    // ========================================
+
     if (!validate()) {
+      toast.error("Please fill in all required fields correctly.");
+
       return;
     }
 
     try {
       setSaving(true);
 
-      // ========================================
-      // CHECK DUPLICATE NAME
-      // ========================================
+      // ======================================
+      // DUPLICATE NAME CHECK
+      // ======================================
 
       const noDuplicateName = await checkDuplicateName();
 
@@ -187,9 +210,9 @@ function ProductForm({
         return;
       }
 
-      // ========================================
-      // CREATE PAYLOAD
-      // ========================================
+      // ======================================
+      // PAYLOAD
+      // ======================================
 
       const payload = {
         name: form.name.trim(),
@@ -205,39 +228,52 @@ function ProductForm({
         description: form.description?.trim() || "",
       };
 
-      // ========================================
-      // UPDATE PRODUCT
-      // ========================================
+      // ======================================
+      // UPDATE
+      // ======================================
 
-      if (editingId) {
+      if (wasEditing) {
         await api.put(`/products/${editingId}`, payload);
       }
 
-      // ========================================
-      // CREATE PRODUCT
-      // ========================================
+      // ======================================
+      // CREATE
+      // ======================================
       else {
         const response = await api.post("/products", payload);
 
-        // Backend-generated code
         if (response.data?.code) {
           setGeneratedCode(response.data.code);
         }
       }
 
-      // ========================================
-      // RESET FORM
-      // ========================================
+      // ======================================
+      // SUCCESS MESSAGE
+      // ======================================
+
+      toast.success(
+        wasEditing
+          ? "Product updated successfully."
+          : "Product created successfully.",
+      );
+
+      // ======================================
+      // RESET
+      // ======================================
 
       onReset();
 
-      // ========================================
-      // RELOAD PRODUCTS
-      // ========================================
+      // ======================================
+      // NEXT CODE
+      // ======================================
 
-      if (!editingId) {
+      if (!wasEditing) {
         await getNextProductCode();
       }
+
+      // ======================================
+      // REFRESH PRODUCT LIST
+      // ======================================
 
       await onSaved();
     } catch (error) {
@@ -247,9 +283,9 @@ function ProductForm({
 
       console.error("Status:", error?.response?.status);
 
-      // ========================================
+      // ======================================
       // DUPLICATE ERROR
-      // ========================================
+      // ======================================
 
       if (error?.response?.status === 409) {
         const field = error?.response?.data?.field;
@@ -259,23 +295,29 @@ function ProductForm({
             ...prev,
             name: "Product name already exists",
           }));
+
+          toast.error("Product name already exists.");
         } else if (field === "code") {
           setErrors((prev) => ({
             ...prev,
             code: "Product code already exists",
           }));
+
+          toast.error("Product code already exists.");
         } else {
-          alert(error?.response?.data?.message || "Product already exists");
+          toast.error(
+            error?.response?.data?.message || "Product already exists.",
+          );
         }
 
         return;
       }
 
-      // ========================================
-      // OTHER ERROR
-      // ========================================
+      // ======================================
+      // GENERAL ERROR
+      // ======================================
 
-      alert(
+      toast.error(
         error?.response?.data?.message ||
           error?.response?.data?.error ||
           error?.message ||
@@ -404,7 +446,7 @@ function ProductForm({
           />
         </label>
 
-        {/* SAVE BUTTON */}
+        {/* SAVE */}
 
         <div className="form-submit">
           <button

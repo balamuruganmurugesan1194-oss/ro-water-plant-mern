@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { toast } from "react-hot-toast";
 
 import { prepareExportData, safeFileName } from "./exportUtils";
 
@@ -17,11 +18,13 @@ export const exportToExcel = ({
   if (!Array.isArray(data)) {
     console.error("Export Excel: data must be an array");
 
+    toast.error("Unable to export: invalid data format.");
+
     return;
   }
 
   if (!data.length) {
-    alert("No data available to export.");
+    toast.error("No data available to export.");
 
     return;
   }
@@ -97,4 +100,6 @@ export const exportToExcel = ({
   // =======================================================
 
   XLSX.writeFile(workbook, `${safeFileName(fileName)}.xlsx`);
+
+  toast.success("Excel file exported successfully.");
 };

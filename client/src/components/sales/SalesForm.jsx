@@ -1,5 +1,6 @@
 import React from "react";
 import { Plus } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 import SearchableSelect from "../common/SearchableSelect";
 import SaleItems from "../sales/SalesItems";
@@ -117,15 +118,12 @@ function SalesForm({
 
     setForm((prev) => ({
       ...prev,
-
       partyId: value,
-
       partyName,
     }));
 
     setErrors((prev) => ({
       ...prev,
-
       partyName: "",
     }));
   };
@@ -240,12 +238,12 @@ function SalesForm({
     e.preventDefault();
 
     if (!canCreate) {
-      alert("You do not have permission to create sales.");
-
+      toast.error("You do not have permission to create sales.");
       return;
     }
 
     if (!validateForm()) {
+      toast.error("Please fix the highlighted fields.");
       return;
     }
 

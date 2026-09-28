@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-hot-toast";
 
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -19,9 +20,11 @@ const createBlankForm = () => ({
 
 function Expenses() {
   const dispatch = useDispatch();
+
   const { data: items, error: loadError } = useSelector(
-    (state) => state.expenses,
+    (state) => state.expenses
   );
+
   const { isSuperAdmin, permissions = [] } = useAuth();
 
   // ==========================================
@@ -46,17 +49,11 @@ function Expenses() {
   const canDelete = hasPermission("expenses.delete");
 
   const [month, setMonth] = useState(() => today().slice(0, 7));
-
   const [search, setSearch] = useState("");
-
   const [saving, setSaving] = useState(false);
-
   const [errors, setErrors] = useState({});
-
   const [currentPage, setCurrentPage] = useState(1);
-
   const [itemsPerPage, setItemsPerPage] = useState(10);
-
   const [form, setForm] = useState(createBlankForm);
 
   // ==========================================
@@ -64,7 +61,6 @@ function Expenses() {
   // ==========================================
 
   const [editingId, setEditingId] = useState(null);
-
   const [expenseNumber, setExpenseNumber] = useState("");
 
   // ==========================================
@@ -138,16 +134,22 @@ function Expenses() {
     }
 
     const date = item.date
-      ? new Date(item.date).toLocaleDateString("en-IN").toLowerCase()
+      ? new Date(item.date)
+          .toLocaleDateString("en-IN")
+          .toLowerCase()
       : "";
 
-    const expenseNumber = item.expenseNumber?.toLowerCase() || "";
+    const expenseNumber =
+      item.expenseNumber?.toLowerCase() || "";
 
-    const category = item.category?.toLowerCase() || "";
+    const category =
+      item.category?.toLowerCase() || "";
 
-    const vendor = item.vendor?.toLowerCase() || "";
+    const vendor =
+      item.vendor?.toLowerCase() || "";
 
-    const notes = item.notes?.toLowerCase() || "";
+    const notes =
+      item.notes?.toLowerCase() || "";
 
     const amount =
       item.amount !== undefined && item.amount !== null
@@ -170,13 +172,18 @@ function Expenses() {
 
   const totalItems = filteredItems.length;
 
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalPages = Math.ceil(
+    totalItems / itemsPerPage
+  );
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
+  const startIndex =
+    (currentPage - 1) * itemsPerPage;
 
-  const endIndex = startIndex + itemsPerPage;
+  const endIndex =
+    startIndex + itemsPerPage;
 
-  const paginatedItems = filteredItems.slice(startIndex, endIndex);
+  const paginatedItems =
+    filteredItems.slice(startIndex, endIndex);
 
   // ==========================================
   // SUBMIT / CREATE / UPDATE
@@ -188,12 +195,16 @@ function Expenses() {
     // ======================================
 
     if (editingId && !canEdit) {
-      alert("You do not have permission to edit expenses.");
+      toast.error(
+        "You do not have permission to edit expenses."
+      );
       return;
     }
 
     if (!editingId && !canCreate) {
-      alert("You do not have permission to create expenses.");
+      toast.error(
+        "You do not have permission to create expenses."
+      );
       return;
     }
 
@@ -213,18 +224,26 @@ function Expenses() {
       // ======================================
 
       if (editingId) {
-        await api.put(`/expenses/${editingId}`, payload);
+        await api.put(
+          `/expenses/${editingId}`,
+          payload
+        );
 
-        alert("Expense updated successfully.");
+        toast.success(
+          "Expense updated successfully."
+        );
       }
 
       // ======================================
       // CREATE
       // ======================================
+
       else {
         await api.post("/expenses", payload);
 
-        alert("Expense saved successfully.");
+        toast.success(
+          "Expense saved successfully."
+        );
       }
 
       // ======================================
@@ -232,13 +251,9 @@ function Expenses() {
       // ======================================
 
       setForm(createBlankForm());
-
       setEditingId(null);
-
       setErrors({});
-
       setSearch("");
-
       setCurrentPage(1);
 
       // ======================================
@@ -246,6 +261,7 @@ function Expenses() {
       // ======================================
 
       dispatch(expenseActions.clearResource());
+
       await load();
 
       // ======================================
@@ -255,13 +271,17 @@ function Expenses() {
       await loadNextExpenseNumber();
     } catch (err) {
       console.error(
-        editingId ? "Failed to update expense:" : "Failed to save expense:",
-        err,
+        editingId
+          ? "Failed to update expense:"
+          : "Failed to save expense:",
+        err
       );
 
-      alert(
+      toast.error(
         err?.response?.data?.message ||
-          (editingId ? "Failed to update expense" : "Failed to save expense"),
+          (editingId
+            ? "Failed to update expense."
+            : "Failed to save expense.")
       );
     } finally {
       setSaving(false);
@@ -275,23 +295,30 @@ function Expenses() {
   const handleEdit = (item) => {
     // Extra frontend protection
     if (!canEdit) {
-      alert("You do not have permission to edit expenses.");
+      toast.error(
+        "You do not have permission to edit expenses."
+      );
       return;
     }
 
     setEditingId(item._id);
 
-    setExpenseNumber(item.expenseNumber || "");
+    setExpenseNumber(
+      item.expenseNumber || ""
+    );
 
     setForm({
       date: item.date
-        ? new Date(item.date).toISOString().split("T")[0]
+        ? new Date(item.date)
+            .toISOString()
+            .split("T")[0]
         : today(),
 
       category: item.category || "",
 
       amount:
-        item.amount !== undefined && item.amount !== null
+        item.amount !== undefined &&
+        item.amount !== null
           ? String(item.amount)
           : "",
 
@@ -330,29 +357,50 @@ function Expenses() {
   const handleDelete = async (id) => {
     // Extra frontend protection
     if (!canDelete) {
-      alert("You do not have permission to delete expenses.");
+      toast.error(
+        "You do not have permission to delete expenses."
+      );
       return;
     }
 
     try {
       await api.delete(`/expenses/${id}`);
 
-      dispatch(expenseActions.clearResource());
+      toast.success(
+        "Expense deleted successfully."
+      );
+
+      dispatch(
+        expenseActions.clearResource()
+      );
+
       await load();
 
       await loadNextExpenseNumber();
 
-      const remainingItems = items.length - 1;
+      const remainingItems =
+        items.length - 1;
 
-      const newTotalPages = Math.ceil(remainingItems / itemsPerPage);
+      const newTotalPages = Math.ceil(
+        remainingItems / itemsPerPage
+      );
 
-      if (newTotalPages > 0 && currentPage > newTotalPages) {
+      if (
+        newTotalPages > 0 &&
+        currentPage > newTotalPages
+      ) {
         setCurrentPage(newTotalPages);
       }
     } catch (err) {
-      console.error("Failed to delete expense:", err);
+      console.error(
+        "Failed to delete expense:",
+        err
+      );
 
-      alert(err?.response?.data?.message || "Failed to delete expense");
+      toast.error(
+        err?.response?.data?.message ||
+          "Failed to delete expense."
+      );
     }
   };
 
@@ -378,7 +426,6 @@ function Expenses() {
 
   const handleSearchChange = (value) => {
     setSearch(value);
-
     setCurrentPage(1);
   };
 
@@ -401,7 +448,6 @@ function Expenses() {
 
   const handleItemsPerPageChange = (value) => {
     setItemsPerPage(value);
-
     setCurrentPage(1);
   };
 
@@ -458,12 +504,16 @@ function Expenses() {
         totalPages={totalPages}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
-        onMonthChange={(value) => setMonth(value)}
+        onMonthChange={(value) =>
+          setMonth(value)
+        }
         onSearchChange={handleSearchChange}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onPageChange={handlePageChange}
-        onItemsPerPageChange={handleItemsPerPageChange}
+        onItemsPerPageChange={
+          handleItemsPerPageChange
+        }
       />
     </div>
   );

@@ -47,3 +47,60 @@
 
   font-size: 22px;
 }
+/* =====================================================
+   DASHBOARD STAT CARDS
+===================================================== */
+
+.dashboard-stat-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* =====================================================
+   DESKTOP
+   4 + 4 + 3
+===================================================== */
+
+@media (min-width: 1201px) {
+  .dashboard-stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* =====================================================
+   LAPTOP / TABLET
+   3 + 3 + 3 + 2
+===================================================== */
+
+@media (min-width: 769px) and (max-width: 1200px) {
+  .dashboard-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* =====================================================
+   MOBILE
+   2 + 2 + 2 + 2 + 2 + 1
+===================================================== */
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .dashboard-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+/* =====================================================
+   SMALL MOBILE
+   1 CARD PER ROW
+===================================================== */
+
+@media (max-width: 480px) {
+  .dashboard-stat-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

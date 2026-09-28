@@ -1,5 +1,6 @@
 import React from "react";
 import { Plus, Save, X } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 import SearchableSelect from "../common/SearchableSelect";
 
@@ -17,9 +18,7 @@ function UserForm({
 }) {
   const isEditing = Boolean(editingId);
 
-  const canSubmit = isEditing
-    ? canEdit
-    : canCreate;
+  const canSubmit = isEditing ? canEdit : canCreate;
 
   const roleOptions = roles.map((role) => ({
     value: role._id,
@@ -28,11 +27,7 @@ function UserForm({
 
   return (
     <section className="panel">
-      <h3>
-        {isEditing
-          ? `Edit User - ${form.name}`
-          : "New User"}
-      </h3>
+      <h3>{isEditing ? `Edit User - ${form.name}` : "New User"}</h3>
 
       <form
         className="form-grid"
@@ -40,10 +35,10 @@ function UserForm({
           event.preventDefault();
 
           if (!canSubmit) {
-            alert(
+            toast.error(
               isEditing
                 ? "You do not have permission to edit users."
-                : "You do not have permission to create users."
+                : "You do not have permission to create users.",
             );
 
             return;
@@ -56,90 +51,47 @@ function UserForm({
 
         <label>
           Name
-
           <input
             type="text"
             value={form.name || ""}
-            className={
-              errors.name
-                ? "input-error"
-                : ""
-            }
+            className={errors.name ? "input-error" : ""}
             placeholder="Enter user name"
-            onChange={(event) =>
-              onChange(
-                "name",
-                event.target.value
-              )
-            }
+            onChange={(event) => onChange("name", event.target.value)}
           />
-
-          {errors.name && (
-            <span className="error-text">
-              {errors.name}
-            </span>
-          )}
+          {errors.name && <span className="error-text">{errors.name}</span>}
         </label>
 
         {/* EMAIL */}
 
         <label>
           Email
-
           <input
             type="email"
             value={form.email || ""}
-            className={
-              errors.email
-                ? "input-error"
-                : ""
-            }
+            className={errors.email ? "input-error" : ""}
             placeholder="Enter email address"
-            onChange={(event) =>
-              onChange(
-                "email",
-                event.target.value
-              )
-            }
+            onChange={(event) => onChange("email", event.target.value)}
           />
-
-          {errors.email && (
-            <span className="error-text">
-              {errors.email}
-            </span>
-          )}
+          {errors.email && <span className="error-text">{errors.email}</span>}
         </label>
 
         {/* PASSWORD */}
 
         <label>
           Password
-
           <input
             type="password"
             value={form.password || ""}
-            className={
-              errors.password
-                ? "input-error"
-                : ""
-            }
+            className={errors.password ? "input-error" : ""}
             placeholder={
               isEditing
                 ? "Leave blank to keep current password"
                 : "Enter password"
             }
-            onChange={(event) =>
-              onChange(
-                "password",
-                event.target.value
-              )
-            }
+            onChange={(event) => onChange("password", event.target.value)}
           />
-
           {errors.password && (
-            <span className="error-text">
-              {errors.password}
-            </span>
+            <span className="error-text">{errors.password}</span>
           )}
         </label>
 
@@ -147,21 +99,13 @@ function UserForm({
 
         <label>
           Role
-
           <SearchableSelect
             options={roleOptions}
             value={form.role || ""}
-            onChange={(value) =>
-              onChange("role", value)
-            }
+            onChange={(value) => onChange("role", value)}
             placeholder="Search role..."
           />
-
-          {errors.role && (
-            <span className="error-text">
-              {errors.role}
-            </span>
-          )}
+          {errors.role && <span className="error-text">{errors.role}</span>}
         </label>
 
         {/* BUTTONS */}
@@ -170,16 +114,10 @@ function UserForm({
           {isEditing ? (
             <>
               {canEdit && (
-                <button
-                  className="primary"
-                  type="submit"
-                  disabled={saving}
-                >
+                <button className="primary" type="submit" disabled={saving}>
                   <Save size={18} />
 
-                  {saving
-                    ? "Updating..."
-                    : "Update User"}
+                  {saving ? "Updating..." : "Update User"}
                 </button>
               )}
 
@@ -190,22 +128,15 @@ function UserForm({
                 disabled={saving}
               >
                 <X size={18} />
-
                 Cancel
               </button>
             </>
           ) : (
             canCreate && (
-              <button
-                className="primary"
-                type="submit"
-                disabled={saving}
-              >
+              <button className="primary" type="submit" disabled={saving}>
                 <Plus size={18} />
 
-                {saving
-                  ? "Saving..."
-                  : "Save User"}
+                {saving ? "Saving..." : "Save User"}
               </button>
             )
           )}

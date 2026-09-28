@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { toast } from "react-hot-toast";
 
 import { getExportHeaders, getExportRows, safeFileName } from "./exportUtils";
 
@@ -19,131 +20,141 @@ export const exportToPDF = ({
   if (!Array.isArray(data)) {
     console.error("Export PDF: data must be an array");
 
+    toast.error("Unable to export: invalid data format.");
+
     return;
   }
 
   if (!data.length) {
-    alert("No data available to export.");
+    toast.error("No data available to export.");
 
     return;
   }
 
-  // =======================================================
-  // DOCUMENT
-  // =======================================================
+  try {
+    // =====================================================
+    // DOCUMENT
+    // =====================================================
 
-  const doc = new jsPDF({
-    orientation,
-    unit: "mm",
-    format: pageSize,
-  });
+    const doc = new jsPDF({
+      orientation,
+      unit: "mm",
+      format: pageSize,
+    });
 
-  // =======================================================
-  // HEADER
-  // =======================================================
+    // =====================================================
+    // HEADER
+    // =====================================================
 
-  doc.setFontSize(18);
+    doc.setFontSize(18);
 
-  doc.text("RO WATER PLANT MANAGEMENT", 14, 15);
+    doc.text("RO WATER PLANT MANAGEMENT", 14, 15);
 
-  doc.setFontSize(13);
+    doc.setFontSize(13);
 
-  doc.text(title, 14, 23);
+    doc.text(title, 14, 23);
 
-  // =======================================================
-  // FILTERS
-  // =======================================================
+    // =====================================================
+    // FILTERS
+    // =====================================================
 
-  const filterText = Object.entries(filters)
-    .filter(
-      ([, value]) => value !== undefined && value !== null && value !== "",
-    )
-    .map(([key, value]) => `${key}: ${value}`)
-    .join("    ");
+    const filterText = Object.entries(filters)
+      .filter(
+        ([, value]) => value !== undefined && value !== null && value !== "",
+      )
+      .map(([key, value]) => `${key}: ${value}`)
+      .join("    ");
 
-  if (filterText) {
-    doc.setFontSize(9);
+    if (filterText) {
+      doc.setFontSize(9);
 
-    doc.text(filterText, 14, 31);
-  }
+      doc.text(filterText, 14, 31);
+    }
 
-  // =======================================================
-  // TABLE
-  // =======================================================
+    // =====================================================
+    // TABLE
+    // =====================================================
 
-  const headers = getExportHeaders(columns);
+    const headers = getExportHeaders(columns);
 
-  const rows = getExportRows(data, columns);
+    const rows = getExportRows(data, columns);
 
-  autoTable(doc, {
-    startY: filterText ? 37 : 31,
+    autoTable(doc, {
+      startY: filterText ? 37 : 31,
 
-    head: [headers],
+      head: [headers],
 
-    body: rows,
+      body: rows,
 
-    theme: "grid",
+      theme: "grid",
 
-    styles: {
-      fontSize: 8,
-      cellPadding: 2.5,
-      overflow: "linebreak",
-    },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2.5,
+        overflow: "linebreak",
+      },
 
-    headStyles: {
-      fontSize: 8,
-      fontStyle: "bold",
-    },
+      headStyles: {
+        fontSize: 8,
+        fontStyle: "bold",
+      },
 
-    alternateRowStyles: {
-      fillColor: [245, 245, 245],
-    },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245],
+      },
 
-    margin: {
-      left: 10,
-      right: 10,
-    },
+      margin: {
+        left: 10,
+        right: 10,
+      },
 
-    didDrawPage: () => {
-      const pageNumber = doc.internal.getNumberOfPages();
+      didDrawPage: () => {
+        const pageNumber = doc.internal.getNumberOfPages();
+
+        doc.setFontSize(8);
+
+        doc.text(
+          `Page ${pageNumber}`,
+          doc.internal.pageSize.getWidth() - 25,
+          doc.internal.pageSize.getHeight() - 8,
+        );
+      },
+    });
+
+    // =====================================================
+    // FOOTER
+    // =====================================================
+
+    const totalPages = doc.internal.getNumberOfPages();
+
+    for (let page = 1; page <= totalPages; page++) {
+      doc.setPage(page);
 
       doc.setFontSize(8);
 
       doc.text(
-        `Page ${pageNumber}`,
-        doc.internal.pageSize.getWidth() - 25,
+        "RO Water Plant Management",
+        10,
         doc.internal.pageSize.getHeight() - 8,
       );
-    },
-  });
 
-  // =======================================================
-  // FOOTER
-  // =======================================================
+      doc.text(
+        `Page ${page} of ${totalPages}`,
+        doc.internal.pageSize.getWidth() - 35,
+        doc.internal.pageSize.getHeight() - 8,
+      );
+    }
 
-  const totalPages = doc.internal.getNumberOfPages();
+    // =====================================================
+    // DOWNLOAD
+    // =====================================================
 
-  for (let page = 1; page <= totalPages; page++) {
-    doc.setPage(page);
+    doc.save(`${safeFileName(fileName)}.pdf`);
 
-    doc.setFontSize(8);
+    toast.success("PDF file exported successfully.");
+  } catch (error) {
+    console.error("Export PDF failed:", error);
 
-    doc.text(
-      `RO Water Plant Management`,
-      10,
-      doc.internal.pageSize.getHeight() - 8,
-    );
-
-    doc.text(
-      `Page ${page} of ${totalPages}`,
-      doc.internal.pageSize.getWidth() - 35,
-      doc.internal.pageSize.getHeight() - 8,
-    );
+    toast.error("Failed to export PDF.");
   }
-
-  // =======================================================
-  // DOWNLOAD
-  // =======================================================
-
-  doc.save(`${safeFileName(fileName)}.pdf`);
 };

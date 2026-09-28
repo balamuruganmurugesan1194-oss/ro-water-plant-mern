@@ -1,12 +1,8 @@
-import React, {
-  useEffect,
-  useState,
-} from "react";
+import React, { useEffect, useState } from "react";
 
-import {
-  useDispatch,
-  useSelector,
-} from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+
+import { toast } from "react-hot-toast";
 
 import RoleForm from "../../components/roles/RoleForm";
 import RoleTable from "../../components/roles/RoleTable";
@@ -28,35 +24,21 @@ const createBlankForm = () => ({
 function RolesPermissions() {
   const dispatch = useDispatch();
 
-  const {
-    roles,
-    permissions,
-    loading,
-  } = useSelector(
-    (state) => state.roles,
-  );
+  const { roles, permissions, loading } = useSelector((state) => state.roles);
 
-  const [form, setForm] = useState(
-    createBlankForm,
-  );
+  const [form, setForm] = useState(createBlankForm);
 
-  const [editingId, setEditingId] =
-    useState(null);
+  const [editingId, setEditingId] = useState(null);
 
-  const [search, setSearch] =
-    useState("");
+  const [search, setSearch] = useState("");
 
-  const [saving, setSaving] =
-    useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const [errors, setErrors] =
-    useState({});
+  const [errors, setErrors] = useState({});
 
-  const [currentPage, setCurrentPage] =
-    useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const [itemsPerPage, setItemsPerPage] =
-    useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   /*
    * =========================================================
@@ -64,8 +46,7 @@ function RolesPermissions() {
    * =========================================================
    */
 
-  const [showPermissions, setShowPermissions] =
-    useState(false);
+  const [showPermissions, setShowPermissions] = useState(false);
 
   /*
    * =========================================================
@@ -84,26 +65,18 @@ function RolesPermissions() {
    * =========================================================
    */
 
-  const filteredRoles = roles.filter(
-    (role) => {
-      const value = search
-        .toLowerCase()
-        .trim();
+  const filteredRoles = roles.filter((role) => {
+    const value = search.toLowerCase().trim();
 
-      if (!value) {
-        return true;
-      }
+    if (!value) {
+      return true;
+    }
 
-      return (
-        role.name
-          ?.toLowerCase()
-          .includes(value) ||
-        role.description
-          ?.toLowerCase()
-          .includes(value)
-      );
-    },
-  );
+    return (
+      role.name?.toLowerCase().includes(value) ||
+      role.description?.toLowerCase().includes(value)
+    );
+  });
 
   /*
    * =========================================================
@@ -111,22 +84,16 @@ function RolesPermissions() {
    * =========================================================
    */
 
-  const totalItems =
-    filteredRoles.length;
+  const totalItems = filteredRoles.length;
 
-  const totalPages = Math.ceil(
-    totalItems / itemsPerPage,
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+
+  const paginatedRoles = filteredRoles.slice(
+    startIndex,
+    startIndex + itemsPerPage,
   );
-
-  const startIndex =
-    (currentPage - 1) *
-    itemsPerPage;
-
-  const paginatedRoles =
-    filteredRoles.slice(
-      startIndex,
-      startIndex + itemsPerPage,
-    );
 
   /*
    * =========================================================
@@ -134,10 +101,7 @@ function RolesPermissions() {
    * =========================================================
    */
 
-  const handleChange = (
-    name,
-    value,
-  ) => {
+  const handleChange = (name, value) => {
     setForm((previous) => ({
       ...previous,
       [name]: value,
@@ -153,11 +117,7 @@ function RolesPermissions() {
      * immediately after selecting permission.
      */
 
-    if (
-      name === "permissions" &&
-      value &&
-      value.length > 0
-    ) {
+    if (name === "permissions" && value && value.length > 0) {
       setErrors((previous) => ({
         ...previous,
         permissions: "",
@@ -179,23 +139,17 @@ function RolesPermissions() {
      */
 
     if (!form.name.trim()) {
-      nextErrors.name =
-        "Role name is required";
+      nextErrors.name = "Role name is required";
     }
 
     /*
      * PERMISSION VALIDATION
      */
 
-    if (
-      !form.permissions ||
-      form.permissions.length === 0
-    ) {
-      nextErrors.permissions =
-        "Select at least one permission";
+    if (!form.permissions || form.permissions.length === 0) {
+      nextErrors.permissions = "Select at least one permission";
 
       /*
-       * IMPORTANT:
        * Automatically open permission
        * matrix when validation fails.
        */
@@ -207,10 +161,10 @@ function RolesPermissions() {
      * STOP SUBMIT
      */
 
-    if (
-      Object.keys(nextErrors).length
-    ) {
+    if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
+
+      toast.error("Please fix the highlighted fields.");
 
       return;
     }
@@ -236,21 +190,15 @@ function RolesPermissions() {
           }),
         ).unwrap();
 
-        alert(
-          "Role updated successfully.",
-        );
+        toast.success("Role updated successfully.");
       } else {
         /*
          * CREATE
          */
 
-        await dispatch(
-          createRole(form),
-        ).unwrap();
+        await dispatch(createRole(form)).unwrap();
 
-        alert(
-          "Role created successfully.",
-        );
+        toast.success("Role created successfully.");
       }
 
       /*
@@ -263,10 +211,16 @@ function RolesPermissions() {
        * REFRESH ROLES
        */
 
-      dispatch(fetchRoles());
+      await dispatch(fetchRoles()).unwrap();
     } catch (error) {
-      alert(
-        error || "Failed to save role",
+      console.error(
+        editingId ? "Failed to update role:" : "Failed to save role:",
+        error,
+      );
+
+      toast.error(
+        error ||
+          (editingId ? "Failed to update role." : "Failed to create role."),
       );
     } finally {
       setSaving(false);
@@ -284,13 +238,8 @@ function RolesPermissions() {
 
     setForm({
       name: role.name || "",
-      description:
-        role.description || "",
-      permissions:
-        role.permissions?.map(
-          (permission) =>
-            permission._id,
-        ) || [],
+      description: role.description || "",
+      permissions: role.permissions?.map((permission) => permission._id) || [],
     });
 
     setErrors({});
@@ -344,30 +293,19 @@ function RolesPermissions() {
    * =========================================================
    */
 
-  const handleDelete = async (
-    id,
-  ) => {
+  const handleDelete = async (id) => {
     try {
-      await dispatch(
-        deleteRole(id),
-      ).unwrap();
+      await dispatch(deleteRole(id)).unwrap();
 
-      alert(
-        "Role deleted successfully.",
-      );
+      toast.success("Role deleted successfully.");
 
-      if (
-        paginatedRoles.length === 1 &&
-        currentPage > 1
-      ) {
-        setCurrentPage(
-          currentPage - 1,
-        );
+      if (paginatedRoles.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
       }
     } catch (error) {
-      alert(
-        error || "Failed to delete role",
-      );
+      console.error("Failed to delete role:", error);
+
+      toast.error(error || "Failed to delete role.");
     }
   };
 
@@ -377,9 +315,7 @@ function RolesPermissions() {
    * =========================================================
    */
 
-  const handleSearch = (
-    value,
-  ) => {
+  const handleSearch = (value) => {
     setSearch(value);
 
     setCurrentPage(1);
@@ -391,9 +327,7 @@ function RolesPermissions() {
    * =========================================================
    */
 
-  const handlePageChange = (
-    page,
-  ) => {
+  const handlePageChange = (page) => {
     setCurrentPage(page);
 
     window.scrollTo({
@@ -408,12 +342,11 @@ function RolesPermissions() {
    * =========================================================
    */
 
-  const handleItemsPerPageChange =
-    (value) => {
-      setItemsPerPage(value);
+  const handleItemsPerPageChange = (value) => {
+    setItemsPerPage(value);
 
-      setCurrentPage(1);
-    };
+    setCurrentPage(1);
+  };
 
   /*
    * =========================================================
@@ -429,19 +362,8 @@ function RolesPermissions() {
         saving={saving || loading}
         editingId={editingId}
         permissions={permissions}
-
-        /*
-         * Permission arrow state
-         */
-
-        showPermissions={
-          showPermissions
-        }
-
-        setShowPermissions={
-          setShowPermissions
-        }
-
+        showPermissions={showPermissions}
+        setShowPermissions={setShowPermissions}
         onChange={handleChange}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
@@ -450,25 +372,17 @@ function RolesPermissions() {
       <RoleTable
         roles={roles}
         filteredRoles={filteredRoles}
-        paginatedRoles={
-          paginatedRoles
-        }
+        paginatedRoles={paginatedRoles}
         search={search}
         currentPage={currentPage}
         totalPages={totalPages}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
-        onSearchChange={
-          handleSearch
-        }
+        onSearchChange={handleSearch}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onPageChange={
-          handlePageChange
-        }
-        onItemsPerPageChange={
-          handleItemsPerPageChange
-        }
+        onPageChange={handlePageChange}
+        onItemsPerPageChange={handleItemsPerPageChange}
       />
     </div>
   );
