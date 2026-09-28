@@ -63,7 +63,6 @@ const NAV_ITEMS = [
     icon: Receipt,
     permission: "expenses.view",
   },
-
 ];
 
 // ======================================================
@@ -290,11 +289,11 @@ function MainLayout() {
 
         {/* USER */}
 
-        <div className="userbox">
+        {/* <div className="userbox">
           <b>{user?.name || "User"}</b>
 
           <small>{displayRole}</small>
-        </div>
+        </div> */}
 
         {/* =================================================
             NAVIGATION
@@ -317,23 +316,73 @@ function MainLayout() {
 
           {canAccessInventory && (
             <div className="settings-menu">
-              <button type="button" className={`nav settings-parent ${location.pathname.startsWith("/inventory") ? "active" : ""}`} onClick={() => setInventoryOpen((prev) => !prev)}>
-                <Boxes size={19} /><span>Inventory</span><ChevronDown size={16} className={inventoryOpen ? "settings-arrow open" : "settings-arrow"} />
+              <button
+                type="button"
+                className={`nav settings-parent ${location.pathname.startsWith("/inventory") ? "active" : ""}`}
+                onClick={() => setInventoryOpen((prev) => !prev)}
+              >
+                <Boxes size={19} />
+                <span>Inventory</span>
+                <ChevronDown
+                  size={16}
+                  className={
+                    inventoryOpen ? "settings-arrow open" : "settings-arrow"
+                  }
+                />
               </button>
-              {inventoryOpen && <div className="settings-submenu">
-                {INVENTORY_ITEMS.map(([key, label]) => <NavLink key={key} to={`/inventory/${key}`} className={location.pathname === `/inventory/${key}` ? "settings-subnav active" : "settings-subnav"}><span>{label}</span></NavLink>)}
-              </div>}
+              {inventoryOpen && (
+                <div className="settings-submenu">
+                  {INVENTORY_ITEMS.map(([key, label]) => (
+                    <NavLink
+                      key={key}
+                      to={`/inventory/${key}`}
+                      className={
+                        location.pathname === `/inventory/${key}`
+                          ? "settings-subnav active"
+                          : "settings-subnav"
+                      }
+                    >
+                      <span>{label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           {canAccessOperations && (
             <div className="settings-menu">
-              <button type="button" className={`nav settings-parent ${location.pathname.startsWith("/operations") ? "active" : ""}`} onClick={() => setOperationsOpen((prev) => !prev)}>
-                <ClipboardList size={19} /><span>Operations</span><ChevronDown size={16} className={operationsOpen ? "settings-arrow open" : "settings-arrow"} />
+              <button
+                type="button"
+                className={`nav settings-parent ${location.pathname.startsWith("/operations") ? "active" : ""}`}
+                onClick={() => setOperationsOpen((prev) => !prev)}
+              >
+                <ClipboardList size={19} />
+                <span>Operations</span>
+                <ChevronDown
+                  size={16}
+                  className={
+                    operationsOpen ? "settings-arrow open" : "settings-arrow"
+                  }
+                />
               </button>
-              {operationsOpen && <div className="settings-submenu">
-                {OPERATION_ITEMS.map(([key, label]) => <NavLink key={key} to={`/operations/${key}`} className={location.pathname.startsWith(`/operations/${key}`) ? "settings-subnav active" : "settings-subnav"}><span>{label}</span></NavLink>)}
-              </div>}
+              {operationsOpen && (
+                <div className="settings-submenu">
+                  {OPERATION_ITEMS.map(([key, label]) => (
+                    <NavLink
+                      key={key}
+                      to={`/operations/${key}`}
+                      className={
+                        location.pathname.startsWith(`/operations/${key}`)
+                          ? "settings-subnav active"
+                          : "settings-subnav"
+                      }
+                    >
+                      <span>{label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -350,7 +399,9 @@ function MainLayout() {
                 <span>Reports</span>
                 <ChevronDown
                   size={16}
-                  className={reportsOpen ? "settings-arrow open" : "settings-arrow"}
+                  className={
+                    reportsOpen ? "settings-arrow open" : "settings-arrow"
+                  }
                 />
               </button>
 
@@ -423,7 +474,6 @@ function MainLayout() {
             </div>
           )}
         </nav>
-
       </aside>
 
       {/* =====================================================
@@ -441,8 +491,7 @@ function MainLayout() {
           </div>
 
           <div className="topbar-actions">
-            <span className="role">{displayRole.toUpperCase()}</span>
-
+            <span className="role">{displayRole.toUpperCase()} / {user?.name || "User"}</span>
             <button
               type="button"
               className="topbar-logout"
