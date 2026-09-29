@@ -5,7 +5,7 @@ import { toast } from "react-hot-toast";
 import api from "../../api/client";
 import Loading from "../../components/common/Loading";
 import SearchableSelect from "../../components/common/SearchableSelect";
-import { fetchProducts } from "../../App/resourceSlice";
+import { fetchProducts } from "../../app/resourceSlice";
 
 export default function StockEntry({ type }) {
   const dispatch = useDispatch();
