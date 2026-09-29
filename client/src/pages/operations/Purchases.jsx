@@ -15,9 +15,7 @@ export default function Purchases() {
   const products = useSelector((state) => state.products.data);
 
   const suppliers = useSelector((state) =>
-    state.parties.data.filter(
-      (party) => party.type === "supplier"
-    )
+    state.parties.data.filter((party) => party.type === "supplier"),
   );
 
   const [rows, setRows] = useState([]);
@@ -36,23 +34,31 @@ export default function Purchases() {
     ],
   });
 
+  // =========================================================
+  // LOAD PURCHASES
+  // =========================================================
+
   const load = async () => {
     setLoading(true);
 
     try {
       const response = await api.get("/purchases");
+
       setRows(response.data || []);
     } catch (error) {
       setRows([]);
 
       toast.error(
-        error?.response?.data?.message ||
-          "Failed to load purchase records"
+        error?.response?.data?.message || "Failed to load purchase records",
       );
     } finally {
       setLoading(false);
     }
   };
+
+  // =========================================================
+  // INITIAL LOAD
+  // =========================================================
 
   useEffect(() => {
     dispatch(fetchProducts({ active: true }));
@@ -60,34 +66,145 @@ export default function Purchases() {
     load();
   }, [dispatch]);
 
-  const updateItem = (index, field, value) =>
+  // =========================================================
+  // PRODUCT OPTIONS
+  // =========================================================
+
+  const productOptions = products.map((product) => ({
+    value: product._id,
+    label: `${product.name} (${product.code})`,
+  }));
+
+  // =========================================================
+  // SUPPLIER OPTIONS
+  // =========================================================
+
+  const supplierOptions = suppliers.map((supplier) => ({
+    value: supplier._id,
+    label: `${supplier.name} (${supplier.code})`,
+  }));
+
+  // =========================================================
+  // PRODUCT OPTIONS FOR EACH ROW
+  // PREVENT DUPLICATE PRODUCT
+  // =========================================================
+
+  const getProductOptions = (index) => {
+    const selectedProducts = form.items
+      .filter((_, itemIndex) => itemIndex !== index)
+      .map((item) => item.product)
+      .filter(Boolean);
+
+    return productOptions.filter(
+      (option) => !selectedProducts.includes(option.value),
+    );
+  };
+
+  // =========================================================
+  // UPDATE ITEM
+  // =========================================================
+
+  const updateItem = (index, field, value) => {
     setForm((current) => ({
       ...current,
+
       items: current.items.map((item, itemIndex) =>
         itemIndex === index
           ? {
               ...item,
               [field]: value,
             }
-          : item
+          : item,
       ),
     }));
+  };
+
+  // =========================================================
+  // ADD ITEM
+  // =========================================================
+
+  const addItem = () => {
+    setForm((current) => ({
+      ...current,
+
+      items: [
+        ...current.items,
+        {
+          product: "",
+          quantity: "",
+          rate: "",
+        },
+      ],
+    }));
+  };
+
+  // =========================================================
+  // REMOVE ITEM
+  // =========================================================
+
+  const removeItem = (index) => {
+    setForm((current) => ({
+      ...current,
+
+      items:
+        current.items.length > 1
+          ? current.items.filter((_, itemIndex) => itemIndex !== index)
+          : current.items,
+    }));
+  };
+
+  // =========================================================
+  // SUBMIT
+  // =========================================================
 
   const submit = async (event) => {
     event.preventDefault();
+
+    // -------------------------------------------------------
+    // SUPPLIER VALIDATION
+    // -------------------------------------------------------
+
+    if (!form.supplier) {
+      toast.error("Please select a supplier");
+      return;
+    }
+
+    // -------------------------------------------------------
+    // ITEM VALIDATION
+    // -------------------------------------------------------
+
+    const invalidItem = form.items.some(
+      (item) =>
+        !item.product ||
+        !item.quantity ||
+        Number(item.quantity) <= 0 ||
+        item.rate === "" ||
+        Number(item.rate) < 0,
+    );
+
+    if (invalidItem) {
+      toast.error("Please select product and enter valid quantity and rate");
+      return;
+    }
 
     setSaving(true);
 
     try {
       await api.post("/purchases", {
         date: form.date,
-        supplier: form.supplier || null,
+
+        supplier: form.supplier,
+
         items: form.items.map((item) => ({
           product: item.product,
           quantity: Number(item.quantity),
           rate: Number(item.rate),
         })),
       });
+
+      // -----------------------------------------------------
+      // RESET FORM
+      // -----------------------------------------------------
 
       setForm({
         date: today(),
@@ -101,55 +218,50 @@ export default function Purchases() {
         ],
       });
 
+      // -----------------------------------------------------
+      // REFRESH REGISTER
+      // -----------------------------------------------------
+
       await load();
 
       toast.success("Purchase saved successfully");
     } catch (error) {
-      toast.error(
-        error?.response?.data?.message ||
-          "Failed to save purchase"
-      );
+      toast.error(error?.response?.data?.message || "Failed to save purchase");
     } finally {
       setSaving(false);
     }
   };
 
+  // =========================================================
+  // LOADING
+  // =========================================================
+
   if (loading) {
     return <Loading />;
   }
 
-  const productOptions = products.map((product) => ({
-    value: product._id,
-    label: `${product.name} (${product.code})`,
-  }));
-
-  const supplierOptions = suppliers.map((supplier) => ({
-    value: supplier._id,
-    label: `${supplier.name} (${supplier.code})`,
-  }));
-
-  const getProductOptions = (index) => {
-    const selected = form.items
-      .filter((_, itemIndex) => itemIndex !== index)
-      .map((item) => item.product)
-      .filter(Boolean);
-
-    return productOptions.filter(
-      (option) => !selected.includes(option.value)
-    );
-  };
+  // =========================================================
+  // UI
+  // =========================================================
 
   return (
     <div className="content">
+      {/* =====================================================
+          NEW PURCHASE
+      ====================================================== */}
+
       <section className="panel">
         <div className="panel-head">
           <h3>New Purchase</h3>
         </div>
 
         <form className="form-grid" onSubmit={submit}>
+          {/* =================================================
+              DATE
+          ================================================== */}
+
           <label>
             Date
-
             <input
               type="date"
               value={form.date}
@@ -163,9 +275,12 @@ export default function Purchases() {
             />
           </label>
 
+          {/* =================================================
+              SUPPLIER
+          ================================================== */}
+
           <label>
             Supplier
-
             <SearchableSelect
               value={form.supplier}
               onChange={(value) =>
@@ -179,6 +294,10 @@ export default function Purchases() {
             />
           </label>
 
+          {/* =================================================
+              ITEMS
+          ================================================== */}
+
           <div className="sale-items-wrapper full-width">
             <div className="sale-items-header">
               <h4>Items</h4>
@@ -186,121 +305,99 @@ export default function Purchases() {
               <button
                 type="button"
                 className="secondary"
-                disabled={
-                  form.items.length >= products.length
-                }
-                onClick={() =>
-                  setForm((current) => ({
-                    ...current,
-                    items: [
-                      ...current.items,
-                      {
-                        product: "",
-                        quantity: "",
-                        rate: "",
-                      },
-                    ],
-                  }))
-                }
+                disabled={form.items.length >= products.length}
+                onClick={addItem}
               >
                 <Plus size={16} />
                 Add Item
               </button>
             </div>
 
-            {form.items.map((item, index) => (
-              <div
-                className="sale-item-row"
-                key={index}
-              >
-                <label className="sale-item-product">
-                  Product
+            <div className="sale-items">
+              {form.items.map((item, index) => (
+                <div className="sale-item-row purchase-item-row" key={index}>
+                  {/* =====================================
+                        PRODUCT
+                    ====================================== */}
 
-                  <SearchableSelect
-                    value={item.product}
-                    onChange={(value) =>
-                      updateItem(
-                        index,
-                        "product",
-                        value
-                      )
-                    }
-                    options={getProductOptions(index)}
-                    placeholder="Select product"
-                  />
-                </label>
+                  <label className="sale-item-product">
+                    Product
+                    <SearchableSelect
+                      value={item.product}
+                      onChange={(value) => updateItem(index, "product", value)}
+                      options={getProductOptions(index)}
+                      placeholder="Select product"
+                    />
+                  </label>
 
-                <label>
-                  Quantity
+                  {/* =====================================
+                        QUANTITY
+                    ====================================== */}
 
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={item.quantity}
-                    onChange={(event) =>
-                      updateItem(
-                        index,
-                        "quantity",
-                        event.target.value
-                      )
-                    }
-                    required
-                  />
-                </label>
+                  <label>
+                    Quantity
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={item.quantity}
+                      onChange={(event) =>
+                        updateItem(index, "quantity", event.target.value)
+                      }
+                      required
+                    />
+                  </label>
 
-                <label>
-                  Rate
+                  {/* =====================================
+                        RATE
+                    ====================================== */}
 
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.rate}
-                    onChange={(event) =>
-                      updateItem(
-                        index,
-                        "rate",
-                        event.target.value
-                      )
-                    }
-                    required
-                  />
-                </label>
+                  <label>
+                    Rate
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.rate}
+                      onChange={(event) =>
+                        updateItem(index, "rate", event.target.value)
+                      }
+                      required
+                    />
+                  </label>
 
-                <button
-                  type="button"
-                  className="icon danger"
-                  title="Remove product"
-                  aria-label="Remove product"
-                  onClick={() =>
-                    setForm((current) => ({
-                      ...current,
-                      items:
-                        current.items.length > 1
-                          ? current.items.filter(
-                              (_, itemIndex) =>
-                                itemIndex !== index
-                            )
-                          : current.items,
-                    }))
-                  }
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
+                  {/* =====================================
+                        DELETE
+                    ====================================== */}
+
+                  <button
+                    type="button"
+                    className="icon danger"
+                    title="Remove product"
+                    aria-label="Remove product"
+                    onClick={() => removeItem(index)}
+                    disabled={form.items.length === 1}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <button
-            type="submit"
-            className="primary"
-            disabled={saving}
-          >
+          {/* =================================================
+              SAVE
+          ================================================== */}
+
+          <button type="submit" className="primary" disabled={saving}>
             {saving ? "Saving..." : "Save Purchase"}
           </button>
         </form>
       </section>
+
+      {/* =====================================================
+          PURCHASE REGISTER
+      ====================================================== */}
 
       <section className="panel">
         <div className="panel-head">
@@ -318,19 +415,23 @@ export default function Purchases() {
             </thead>
 
             <tbody>
-              {rows.map((row) => (
-                <tr key={row._id}>
-                  <td>{row.purchaseNumber}</td>
+              {rows.length > 0 ? (
+                rows.map((row) => (
+                  <tr key={row._id}>
+                    <td>{row.purchaseNumber}</td>
 
-                  <td>
-                    {new Date(
-                      row.date
-                    ).toLocaleDateString("en-IN")}
+                    <td>{new Date(row.date).toLocaleDateString("en-IN")}</td>
+
+                    <td>{row.totalAmount}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="3" className="empty-state">
+                    No purchase records found
                   </td>
-
-                  <td>{row.totalAmount}</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

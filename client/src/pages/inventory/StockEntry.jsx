@@ -1,12 +1,24 @@
 import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-hot-toast";
+
 import api from "../../api/client";
 import Loading from "../../components/common/Loading";
 import SearchableSelect from "../../components/common/SearchableSelect";
+import { fetchProducts } from "../../App/resourceSlice";
 
 export default function StockEntry({ type }) {
-  const products = useSelector((state) => state.products.data);
+  const dispatch = useDispatch();
+
+  const { data, loading: productsLoading } = useSelector(
+    (state) => state.products,
+  );
+
+  const products = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.products)
+      ? data.products
+      : [];
 
   const [form, setForm] = useState({
     productId: "",
@@ -15,23 +27,37 @@ export default function StockEntry({ type }) {
   });
 
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const title = type === "opening" ? "Opening Stock" : "Stock Adjustment";
+
+  useEffect(() => {
+    if (!products.length) {
+      dispatch(
+        fetchProducts({
+          page: 1,
+          limit: 1000,
+        }),
+      );
+    }
+  }, [dispatch, products.length]);
 
   const options = products.map((product) => ({
     value: product._id,
     label: `${product.name} (${product.code})`,
   }));
 
-  useEffect(() => {
-    if (!products.length) {
-      setLoading(false);
-    }
-  }, [products]);
-
   const submit = async (event) => {
     event.preventDefault();
+
+    if (!form.productId) {
+      toast.error("Please select a product");
+      return;
+    }
+
+    if (!form.quantity || Number(form.quantity) <= 0) {
+      toast.error("Please enter a valid quantity");
+      return;
+    }
 
     setSaving(true);
 
@@ -39,8 +65,9 @@ export default function StockEntry({ type }) {
       await api.post(
         `/inventory/${type === "opening" ? "opening" : "adjustments"}`,
         {
-          ...form,
+          productId: form.productId,
           quantity: Number(form.quantity),
+          notes: form.notes,
         },
       );
 
@@ -61,7 +88,7 @@ export default function StockEntry({ type }) {
     }
   };
 
-  if (loading) {
+  if (productsLoading) {
     return <Loading />;
   }
 
@@ -84,7 +111,9 @@ export default function StockEntry({ type }) {
                 }))
               }
               options={options}
-              placeholder="Select product"
+              placeholder={
+                products.length ? "Select product" : "No products available"
+              }
             />
           </label>
 
@@ -118,7 +147,11 @@ export default function StockEntry({ type }) {
             />
           </label>
 
-          <button className="primary" type="submit" disabled={saving}>
+          <button
+            className="primary"
+            type="submit"
+            disabled={saving || !products.length}
+          >
             {saving ? "Saving..." : `Save ${title}`}
           </button>
         </form>
