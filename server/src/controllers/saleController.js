@@ -2,10 +2,12 @@ import mongoose from "mongoose";
 
 import Sale from "../models/Sale.js";
 import SaleItem from "../models/SaleItem.js";
+import StockMovement from "../models/StockMovement.js";
 import Party from "../models/Party.js";
 import Product from "../models/Product.js";
 import Counter from "../models/Counter.js";
 import { getNextNumber } from "../utils/getNextNumber.js";
+import { getPagination, paginatedResponse } from "../utils/pagination.js";
 // ==========================================
 // GET SALES
 // GET /api/sales
@@ -79,14 +81,28 @@ export const getSales = async (req, res) => {
     // GET SALES
     // ========================================
 
-    const sales = await Sale.find(filter)
+    const salesQuery = Sale.find(filter)
       .populate("partyId", "name type")
       .sort({
         date: -1,
         createdAt: -1,
-      })
-      .limit(500)
-      .lean();
+      });
+
+    let sales;
+    let pagination;
+
+    if (req.query.page || req.query.limit) {
+      const { page, limit, skip } = getPagination(req.query);
+      const [pagedSales, total] = await Promise.all([
+        salesQuery.skip(skip).limit(limit).lean(),
+        Sale.countDocuments(filter),
+      ]);
+
+      sales = pagedSales;
+      pagination = { page, limit, total, totalPages: Math.ceil(total / limit) };
+    } else {
+      sales = await salesQuery.limit(500).lean();
+    }
 
     // ========================================
     // GET SALE ITEMS
@@ -99,22 +115,28 @@ export const getSales = async (req, res) => {
         $in: saleIds,
       },
     })
-      .populate("product")
+      .populate("product", "name code category unit rate active")
       .lean();
 
-    // ========================================
-    // ATTACH ITEMS
-    // ========================================
+    // Index items once so attaching them stays linear as the result grows.
+    const itemsBySale = new Map();
+
+    for (const item of saleItems) {
+      const saleId = item.sale.toString();
+      const items = itemsBySale.get(saleId) || [];
+
+      items.push(item);
+      itemsBySale.set(saleId, items);
+    }
 
     const salesWithItems = sales.map((sale) => ({
       ...sale,
-
-      items: saleItems.filter(
-        (item) => item.sale.toString() === sale._id.toString(),
-      ),
+      items: itemsBySale.get(sale._id.toString()) || [],
     }));
 
-    res.status(200).json(salesWithItems);
+    res
+      .status(200)
+      .json(pagination ? paginatedResponse(salesWithItems, pagination.total, pagination.page, pagination.limit) : salesWithItems);
   } catch (error) {
     console.error("GET SALES ERROR:", error);
 
@@ -282,6 +304,20 @@ export const createSale = async (req, res) => {
     // CLEAN ITEMS
     // ========================================
 
+    const productIds = [
+      ...new Set(items.map((item) => String(item.product || ""))),
+    ];
+
+    const products = await Product.find({
+      _id: { $in: productIds.filter((id) => mongoose.Types.ObjectId.isValid(id)) },
+    })
+      .select("_id currentStock")
+      .lean();
+
+    const productsById = new Map(
+      products.map((product) => [product._id.toString(), product]),
+    );
+
     const cleanedItems = [];
 
     for (let i = 0; i < items.length; i++) {
@@ -294,10 +330,7 @@ export const createSale = async (req, res) => {
         });
       }
 
-      // Check product
-      const product = await Product.findById(item.product).lean();
-
-      if (!product) {
+      if (!productsById.has(item.product.toString())) {
         return res.status(400).json({
           message: `Product not found for item ${i + 1}`,
         });
@@ -342,6 +375,22 @@ export const createSale = async (req, res) => {
       (total, item) => total + item.amount,
       0,
     );
+
+    const requestedStock = cleanedItems.reduce((quantities, item) => {
+      const productId = item.product.toString();
+      quantities[productId] = (quantities[productId] || 0) + item.quantity;
+      return quantities;
+    }, {});
+
+    for (const [productId, quantity] of Object.entries(requestedStock)) {
+      const product = productsById.get(productId);
+
+      if ((product.currentStock || 0) < quantity) {
+        return res.status(400).json({
+          message: `Insufficient stock for product ${productId}`,
+        });
+      }
+    }
 
     if (totalAmount <= 0) {
       return res.status(400).json({
@@ -401,6 +450,34 @@ export const createSale = async (req, res) => {
     }));
 
     const createdItems = await SaleItem.insertMany(saleItems);
+
+    const stockMovements = [];
+
+    for (const [productId, quantity] of Object.entries(requestedStock)) {
+      const updatedProduct = await Product.findOneAndUpdate(
+        { _id: productId, currentStock: { $gte: quantity } },
+        { $inc: { currentStock: -quantity } },
+        { new: true },
+      ).select("currentStock");
+
+      if (!updatedProduct) {
+        return res.status(409).json({
+          message: "Stock changed while creating the sale. Please retry.",
+        });
+      }
+
+      stockMovements.push({
+        product: productId,
+        type: "sale",
+        quantity: -quantity,
+        balanceAfter: updatedProduct.currentStock,
+        referenceType: "sale",
+        referenceId: sale._id,
+        createdBy: req.user?.id || req.user?._id,
+      });
+    }
+
+    await StockMovement.insertMany(stockMovements);
 
     // ========================================
     // RESPONSE

@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-hot-toast";
 
 import api from "../api/client";
 import { today } from "../utils/helpers";
@@ -8,7 +10,32 @@ import SalesForm from "../components/sales/SalesForm";
 import SalesRegister from "../components/sales/SalesRegister";
 import SaleDetailsModal from "../components/sales/SaleDetailsModal";
 
+import {
+  fetchParties,
+  fetchProducts,
+  fetchSales,
+  saleActions,
+} from "../app/resourceSlice";
+
 function Sales() {
+  const dispatch = useDispatch();
+
+  const productsState = useSelector((state) => state.products);
+  const partiesState = useSelector((state) => state.parties);
+  const salesState = useSelector((state) => state.sales);
+
+  const products = productsState.data;
+
+  const customers = partiesState.data.filter(
+    (party) => party.type === "customer",
+  );
+
+  const suppliers = partiesState.data.filter(
+    (party) => party.type === "supplier",
+  );
+
+  const sales = salesState.data;
+
   // ==========================================
   // AUTH / PERMISSIONS
   // ==========================================
@@ -28,34 +55,19 @@ function Sales() {
   };
 
   const canView = hasPermission("sales.view");
-
   const canCreate = hasPermission("sales.create");
-
   const canEdit = hasPermission("sales.edit");
-
   const canDelete = hasPermission("sales.delete");
 
   // ==========================================
   // STATE
   // ==========================================
 
-  const [sales, setSales] = useState([]);
-
-  const [products, setProducts] = useState([]);
-
-  const [customers, setCustomers] = useState([]);
-
-  const [suppliers, setSuppliers] = useState([]);
-
   const [type, setType] = useState("retail");
 
   const [month, setMonth] = useState(() => today().slice(0, 7));
 
   const [search, setSearch] = useState("");
-
-  const [loading, setLoading] = useState(false);
-
-  const [productsLoading, setProductsLoading] = useState(false);
 
   const [saving, setSaving] = useState(false);
 
@@ -81,21 +93,12 @@ function Sales() {
 
   const createBlankForm = () => ({
     date: today(),
-
-    // Customer / Supplier ID
     partyId: "",
-
-    // Customer / Supplier / Other name
     partyName: "",
-
     items: [],
-
     paymentMode: "Cash",
-
     paymentStatus: "Paid",
-
     notes: "",
-
     amount: 0,
   });
 
@@ -123,6 +126,10 @@ function Sales() {
       console.error("Failed to load next sale number:", error);
 
       setSaleNumber("");
+
+      toast.error(
+        error?.response?.data?.message || "Failed to load next sale number",
+      );
     }
   };
 
@@ -132,29 +139,15 @@ function Sales() {
 
   const loadParties = async () => {
     if (!canCreate) {
-      setCustomers([]);
-      setSuppliers([]);
       return;
     }
 
     try {
-      const response = await api.get("/parties");
-
-      const data = response.data?.data || response.data || [];
-
-      const customerList = data.filter((party) => party.type === "customer");
-
-      const supplierList = data.filter((party) => party.type === "supplier");
-
-      setCustomers(customerList);
-
-      setSuppliers(supplierList);
+      await dispatch(fetchParties({}));
     } catch (error) {
       console.error("Failed to load parties:", error);
 
-      setCustomers([]);
-
-      setSuppliers([]);
+      toast.error(error?.response?.data?.message || "Failed to load parties");
     }
   };
 
@@ -164,22 +157,15 @@ function Sales() {
 
   const loadProducts = async () => {
     if (!canCreate) {
-      setProducts([]);
       return;
     }
 
     try {
-      setProductsLoading(true);
-
-      const response = await api.get("/products?active=true");
-
-      setProducts(response.data || []);
+      await dispatch(fetchProducts({ active: true }));
     } catch (error) {
       console.error("Failed to load products:", error);
 
-      setProducts([]);
-    } finally {
-      setProductsLoading(false);
+      toast.error(error?.response?.data?.message || "Failed to load products");
     }
   };
 
@@ -189,26 +175,23 @@ function Sales() {
 
   const loadSales = async (searchValue = search) => {
     if (!canView) {
-      setSales([]);
       return;
     }
 
     try {
-      setLoading(true);
-
-      const response = await api.get(
-        `/sales?month=${month}&type=${type}&search=${encodeURIComponent(
-          searchValue,
-        )}`,
+      await dispatch(
+        fetchSales({
+          month,
+          type,
+          search: searchValue,
+          page: currentPage,
+          limit: itemsPerPage,
+        }),
       );
-
-      setSales(response.data || []);
     } catch (error) {
       console.error("Failed to load sales:", error);
 
-      setSales([]);
-    } finally {
-      setLoading(false);
+      toast.error(error?.response?.data?.message || "Failed to load sales");
     }
   };
 
@@ -225,9 +208,7 @@ function Sales() {
 
     if (canCreate) {
       loadProducts();
-
       loadParties();
-
       loadNextSaleNumber();
     }
   }, [canView, canCreate]);
@@ -274,6 +255,12 @@ function Sales() {
     return () => clearTimeout(throttleTimeoutRef.current);
   }, [search, canView]);
 
+  useEffect(() => {
+    if (canView) {
+      loadSales(search);
+    }
+  }, [currentPage, itemsPerPage]);
+
   // ==========================================
   // TYPE CHANGE
   // ==========================================
@@ -286,9 +273,6 @@ function Sales() {
     setCurrentPage(1);
 
     setForm(createBlankForm());
-
-    // Keep current counter preview.
-    // Sale number is independent of type.
   };
 
   // ==========================================
@@ -297,7 +281,7 @@ function Sales() {
 
   const handleSaveSale = async (saleForm) => {
     if (!canCreate) {
-      alert("You do not have permission to create sales.");
+      toast.error("You do not have permission to create sales.");
 
       return;
     }
@@ -311,11 +295,8 @@ function Sales() {
 
       const items = saleForm.items.map((item) => ({
         product: item.product,
-
         quantity: Number(item.quantity),
-
         rate: Number(item.rate),
-
         amount: Number(item.quantity) * Number(item.rate),
       }));
 
@@ -335,47 +316,40 @@ function Sales() {
       const payload = {
         date: saleForm.date,
 
-        // =====================================
         // PARTY
-        // =====================================
-
         partyId: saleForm.partyId || null,
 
         partyName: saleForm.partyName?.trim() || "",
 
         type,
 
-        // =====================================
         // PRODUCTS
-        // =====================================
-
         items,
 
         amount: totalAmount,
 
-        // =====================================
         // PAYMENT
-        // =====================================
-
         paymentMode: saleForm.paymentMode,
 
         paymentStatus: saleForm.paymentStatus,
 
-        // =====================================
         // NOTES
-        // =====================================
-
         notes: saleForm.notes?.trim() || "",
       };
 
       // ========================================
-      // DO NOT SEND SALE NUMBER
-      // BACKEND GENERATES IT
+      // BACKEND GENERATES SALE NUMBER
       // ========================================
 
       const response = await api.post("/sales", payload);
 
       console.log("Sale created:", response.data);
+
+      // ========================================
+      // SUCCESS TOAST
+      // ========================================
+
+      toast.success("Sale saved successfully");
 
       // ========================================
       // RESET FORM
@@ -391,6 +365,8 @@ function Sales() {
       // RELOAD SALES
       // ========================================
 
+      dispatch(saleActions.clearResource());
+
       await loadSales(search);
 
       // ========================================
@@ -401,7 +377,7 @@ function Sales() {
     } catch (error) {
       console.error("Failed to save sale:", error);
 
-      alert(error?.response?.data?.message || "Failed to save sale");
+      toast.error(error?.response?.data?.message || "Failed to save sale");
     } finally {
       setSaving(false);
     }
@@ -413,7 +389,7 @@ function Sales() {
 
   const handleDelete = async (id) => {
     if (!canDelete) {
-      alert("You do not have permission to delete sales.");
+      toast.error("You do not have permission to delete sales.");
 
       return;
     }
@@ -422,7 +398,15 @@ function Sales() {
       await api.delete(`/sales/${id}`);
 
       // Reload after soft delete
+      dispatch(saleActions.clearResource());
+
       await loadSales(search);
+
+      // ========================================
+      // SUCCESS TOAST
+      // ========================================
+
+      toast.success("Sale deleted successfully");
 
       setCurrentPage((page) => {
         const remainingItems = Math.max(sales.length - 1, 0);
@@ -438,7 +422,7 @@ function Sales() {
     } catch (error) {
       console.error("Failed to delete sale:", error);
 
-      alert(error?.response?.data?.message || "Failed to delete sale");
+      toast.error(error?.response?.data?.message || "Failed to delete sale");
     }
   };
 
@@ -446,11 +430,9 @@ function Sales() {
   // PAGINATION
   // ==========================================
 
-  const totalPages = Math.ceil(sales.length / itemsPerPage);
+  const totalPages = salesState.pagination?.totalPages || 0;
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
-
-  const paginatedSales = sales.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedSales = sales;
 
   // ==========================================
   // NO VIEW PERMISSION
@@ -487,7 +469,7 @@ function Sales() {
           errors={errors}
           setErrors={setErrors}
           products={products}
-          productsLoading={productsLoading}
+          productsLoading={productsState.loading}
           saving={saving}
           onSave={handleSaveSale}
           customers={customers}
@@ -504,13 +486,13 @@ function Sales() {
       <SalesRegister
         sales={paginatedSales}
         allSales={sales}
-        loading={loading}
+        loading={salesState.loading}
         month={month}
         type={type}
         search={search}
         currentPage={currentPage}
         totalPages={totalPages}
-        totalItems={sales.length}
+        totalItems={salesState.pagination?.total || sales.length}
         itemsPerPage={itemsPerPage}
         canEdit={canEdit}
         canDelete={canDelete}
@@ -519,7 +501,6 @@ function Sales() {
         onPageChange={setCurrentPage}
         onItemsPerPageChange={(value) => {
           setItemsPerPage(value);
-
           setCurrentPage(1);
         }}
         onDelete={handleDelete}

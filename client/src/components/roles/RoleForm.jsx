@@ -1,5 +1,11 @@
 import React from "react";
-import { Plus, Save, X } from "lucide-react";
+import {
+  Plus,
+  Save,
+  X,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 import PermissionMatrix from "./PermissionMatrix";
 
@@ -9,6 +15,8 @@ function RoleForm({
   saving,
   editingId,
   permissions,
+  showPermissions,
+  setShowPermissions,
   onChange,
   onSubmit,
   onCancel,
@@ -17,7 +25,11 @@ function RoleForm({
 
   return (
     <section className="panel">
-      <h3>{isEditing ? `Edit Role - ${form.name}` : "New Role"}</h3>
+      <h3>
+        {isEditing
+          ? `Edit Role - ${form.name}`
+          : "New Role"}
+      </h3>
 
       <form
         className="form-grid role-form"
@@ -28,7 +40,6 @@ function RoleForm({
       >
         {/* =================================================
             ROLE NAME + DESCRIPTION
-            SAME ROW
         ================================================= */}
 
         <div className="role-basic-fields">
@@ -36,45 +47,104 @@ function RoleForm({
 
           <label>
             Role Name
+
             <input
               type="text"
               value={form.name || ""}
-              className={errors.name ? "input-error" : ""}
+              className={
+                errors.name ? "input-error" : ""
+              }
               placeholder="Enter role name"
-              onChange={(event) => onChange("name", event.target.value)}
+              onChange={(event) =>
+                onChange(
+                  "name",
+                  event.target.value
+                )
+              }
             />
-            {errors.name && <span className="error-text">{errors.name}</span>}
+
+            {errors.name && (
+              <span className="error-text">
+                {errors.name}
+              </span>
+            )}
           </label>
 
-          {/* DESCRIPTION */}
+          {/* DESCRIPTION + ARROW */}
 
-          <label>
-            Description
-            <input
-              type="text"
-              value={form.description || ""}
-              placeholder="Enter role description"
-              onChange={(event) => onChange("description", event.target.value)}
-            />
-          </label>
+          <div className="description-with-arrow">
+            <label>
+              Description
+
+              <input
+                type="text"
+                value={form.description || ""}
+                placeholder="Enter role description"
+                onChange={(event) =>
+                  onChange(
+                    "description",
+                    event.target.value
+                  )
+                }
+              />
+            </label>
+
+            {/* ONLY ARROW */}
+
+            <button
+              type="button"
+              className="permission-arrow"
+              onClick={() =>
+                setShowPermissions(
+                  (previous) => !previous
+                )
+              }
+              aria-label={
+                showPermissions
+                  ? "Hide permissions"
+                  : "Show permissions"
+              }
+              title={
+                showPermissions
+                  ? "Hide permissions"
+                  : "Show permissions"
+              }
+            >
+              {showPermissions ? (
+                <ChevronUp size={20} />
+              ) : (
+                <ChevronDown size={20} />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* =================================================
-            PERMISSIONS
-            BELOW BASIC FORM
+            PERMISSION MATRIX
         ================================================= */}
 
-        <div className="role-permissions-field">
-          <PermissionMatrix
-            permissions={permissions}
-            selectedPermissions={form.permissions || []}
-            onChange={(value) => onChange("permissions", value)}
-          />
+        {showPermissions && (
+          <div className="role-permissions-field">
+            <PermissionMatrix
+              permissions={permissions}
+              selectedPermissions={
+                form.permissions || []
+              }
+              onChange={(value) =>
+                onChange(
+                  "permissions",
+                  value
+                )
+              }
+            />
 
-          {errors.permissions && (
-            <span className="error-text">{errors.permissions}</span>
-          )}
-        </div>
+            {errors.permissions && (
+              <span className="error-text">
+                {errors.permissions}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* =================================================
             BUTTONS
@@ -83,10 +153,16 @@ function RoleForm({
         <div className="form-submit">
           {isEditing ? (
             <>
-              <button className="primary" type="submit" disabled={saving}>
+              <button
+                className="primary"
+                type="submit"
+                disabled={saving}
+              >
                 <Save size={18} />
 
-                {saving ? "Updating..." : "Update Role"}
+                {saving
+                  ? "Updating..."
+                  : "Update Role"}
               </button>
 
               <button
@@ -96,14 +172,21 @@ function RoleForm({
                 disabled={saving}
               >
                 <X size={18} />
+
                 Cancel
               </button>
             </>
           ) : (
-            <button className="primary" type="submit" disabled={saving}>
+            <button
+              className="primary"
+              type="submit"
+              disabled={saving}
+            >
               <Plus size={18} />
 
-              {saving ? "Saving..." : "Save Role"}
+              {saving
+                ? "Saving..."
+                : "Save Role"}
             </button>
           )}
         </div>

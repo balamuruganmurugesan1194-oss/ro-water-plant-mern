@@ -40,6 +40,18 @@ const productSchema = new mongoose.Schema(
       default: true,
     },
 
+    currentStock: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    reorderLevel: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
     description: {
       type: String,
       default: "",
@@ -50,6 +62,10 @@ const productSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+productSchema.index({ active: 1, createdAt: -1 });
+productSchema.index({ category: 1, active: 1 });
+productSchema.index({ active: 1, currentStock: 1, reorderLevel: 1 });
 
 const Product = mongoose.model("Product", productSchema);
 

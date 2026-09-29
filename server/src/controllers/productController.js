@@ -1,6 +1,7 @@
 import Product from "../models/Product.js";
 import Counter from "../models/Counter.js";
 import { getNextNumber } from "../utils/getNextNumber.js";
+import { getPagination, paginatedResponse } from "../utils/pagination.js";
 
 /*
 |--------------------------------------------------------------------------
@@ -54,9 +55,23 @@ export const getProducts = async (req, res) => {
       ];
     }
 
-    const products = await Product.find(filter).sort({
-      createdAt: -1,
-    });
+    const query = Product.find(filter)
+      .select("name code category unit rate active description createdAt")
+      .sort({ createdAt: -1 });
+
+    if (req.query.page || req.query.limit) {
+      const { page, limit, skip } = getPagination(req.query);
+      const [products, total] = await Promise.all([
+        query.skip(skip).limit(limit).lean(),
+        Product.countDocuments(filter),
+      ]);
+
+      return res.status(200).json(
+        paginatedResponse(products, total, page, limit),
+      );
+    }
+
+    const products = await query.lean();
 
     return res.status(200).json(products);
   } catch (error) {

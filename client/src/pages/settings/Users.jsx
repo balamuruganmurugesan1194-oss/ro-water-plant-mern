@@ -1,13 +1,13 @@
-import React, {
-  useEffect,
-  useState,
-} from "react";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-hot-toast";
 
 import api from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 
 import UserForm from "../../components/users/UserForm";
 import UserTable from "../../components/users/UserTable";
+import { fetchUsers, userActions } from "../../app/resourceSlice";
 
 const createBlankForm = () => ({
   name: "",
@@ -17,18 +17,17 @@ const createBlankForm = () => ({
 });
 
 function Users() {
-  const {
-    isSuperAdmin,
-    permissions = [],
-  } = useAuth();
+  const dispatch = useDispatch();
+
+  const { data: items, error: loadError } = useSelector((state) => state.users);
+
+  const { isSuperAdmin, permissions = [] } = useAuth();
 
   // ==========================================
   // PERMISSIONS
   // ==========================================
 
-  const hasPermission = (
-    permission
-  ) => {
+  const hasPermission = (permission) => {
     if (isSuperAdmin === true) {
       return true;
     }
@@ -37,56 +36,37 @@ function Users() {
       return true;
     }
 
-    return permissions.includes(
-      permission
-    );
+    return permissions.includes(permission);
   };
 
-  const canView =
-    hasPermission("users.view");
+  const canView = hasPermission("users.view");
 
-  const canCreate =
-    hasPermission("users.create");
+  const canCreate = hasPermission("users.create");
 
-  const canEdit =
-    hasPermission("users.edit");
+  const canEdit = hasPermission("users.edit");
 
-  const canDelete =
-    hasPermission("users.delete");
+  const canDelete = hasPermission("users.delete");
 
   // ==========================================
   // STATE
   // ==========================================
 
-  const [items, setItems] =
-    useState([]);
+  const [roles, setRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
 
-  const [roles, setRoles] =
-    useState([]);
+  const [search, setSearch] = useState("");
 
-  const [rolesLoading, setRolesLoading] =
-    useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const [search, setSearch] =
-    useState("");
+  const [errors, setErrors] = useState({});
 
-  const [saving, setSaving] =
-    useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const [errors, setErrors] =
-    useState({});
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const [currentPage, setCurrentPage] =
-    useState(1);
+  const [form, setForm] = useState(createBlankForm);
 
-  const [itemsPerPage, setItemsPerPage] =
-    useState(10);
-
-  const [form, setForm] =
-    useState(createBlankForm);
-
-  const [editingId, setEditingId] =
-    useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   // ==========================================
   // LOAD USERS
@@ -98,32 +78,11 @@ function Users() {
     }
 
     try {
-      const response =
-        await api.get(
-          "/settings/users"
-        );
-
-      setItems(
-        Array.isArray(
-          response.data
-        )
-          ? response.data
-          : response.data?.users ||
-              []
-      );
+      await dispatch(fetchUsers({}));
     } catch (err) {
-      console.error(
-        "Failed to load users:",
-        err
-      );
+      console.error("Failed to load users:", err);
 
-      setItems([]);
-
-      alert(
-        err?.response?.data
-          ?.message ||
-          "Failed to load users"
-      );
+      toast.error(err?.response?.data?.message || "Failed to load users.");
     }
   };
 
@@ -139,32 +98,19 @@ function Users() {
     try {
       setRolesLoading(true);
 
-      const response =
-        await api.get(
-          "/settings/roles/active"
-        );
+      const response = await api.get("/settings/roles/active");
 
       setRoles(
-        Array.isArray(
-          response.data
-        )
+        Array.isArray(response.data)
           ? response.data
-          : response.data?.roles ||
-              []
+          : response.data?.roles || [],
       );
     } catch (err) {
-      console.error(
-        "Failed to load roles:",
-        err
-      );
+      console.error("Failed to load roles:", err);
 
       setRoles([]);
 
-      alert(
-        err?.response?.data
-          ?.message ||
-          "Failed to load roles"
-      );
+      toast.error(err?.response?.data?.message || "Failed to load roles.");
     } finally {
       setRolesLoading(false);
     }
@@ -182,148 +128,100 @@ function Users() {
     if (canCreate || canEdit) {
       loadRoles();
     }
-  }, [
-    canView,
-    canCreate,
-    canEdit,
-  ]);
+  }, [canView, canCreate, canEdit]);
 
   // ==========================================
   // SEARCH
   // ==========================================
 
-  const filteredItems =
-    items.filter((item) => {
-      const searchValue =
-        search
-          .toLowerCase()
-          .trim();
+  const filteredItems = items.filter((item) => {
+    const searchValue = search.toLowerCase().trim();
 
-      if (!searchValue) {
-        return true;
-      }
+    if (!searchValue) {
+      return true;
+    }
 
-      const name =
-        item.name?.toLowerCase() ||
-        "";
+    const name = item.name?.toLowerCase() || "";
 
-      const email =
-        item.email?.toLowerCase() ||
-        "";
+    const email = item.email?.toLowerCase() || "";
 
-      const userRole =
-        typeof item.role ===
-        "string"
-          ? item.role.toLowerCase()
-          : item.role?.name?.toLowerCase() ||
-            "";
+    const userRole =
+      typeof item.role === "string"
+        ? item.role.toLowerCase()
+        : item.role?.name?.toLowerCase() || "";
 
-      return (
-        name.includes(
-          searchValue
-        ) ||
-        email.includes(
-          searchValue
-        ) ||
-        userRole.includes(
-          searchValue
-        )
-      );
-    });
+    return (
+      name.includes(searchValue) ||
+      email.includes(searchValue) ||
+      userRole.includes(searchValue)
+    );
+  });
 
   // ==========================================
   // PAGINATION
   // ==========================================
 
-  const totalItems =
-    filteredItems.length;
+  const totalItems = filteredItems.length;
 
-  const totalPages = Math.ceil(
-    totalItems / itemsPerPage
-  );
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  const startIndex =
-    (currentPage - 1) *
-    itemsPerPage;
+  const startIndex = (currentPage - 1) * itemsPerPage;
 
-  const endIndex =
-    startIndex +
-    itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
 
-  const paginatedItems =
-    filteredItems.slice(
-      startIndex,
-      endIndex
-    );
+  const paginatedItems = filteredItems.slice(startIndex, endIndex);
 
   // ==========================================
   // SUBMIT USER
   // ==========================================
 
   const submit = async () => {
+    // ========================================
+    // PERMISSION
+    // ========================================
+
     if (editingId && !canEdit) {
-      alert(
-        "You do not have permission to edit users."
-      );
+      toast.error("You do not have permission to edit users.");
 
       return;
     }
 
     if (!editingId && !canCreate) {
-      alert(
-        "You do not have permission to create users."
-      );
+      toast.error("You do not have permission to create users.");
 
       return;
     }
 
-    const validationErrors =
-      {};
+    const validationErrors = {};
 
     // ========================================
     // VALIDATION
     // ========================================
 
     if (!form.name.trim()) {
-      validationErrors.name =
-        "Name is required";
+      validationErrors.name = "Name is required";
     }
 
     if (!form.email.trim()) {
-      validationErrors.email =
-        "Email is required";
+      validationErrors.email = "Email is required";
     }
 
-    if (
-      !editingId &&
-      !form.password.trim()
-    ) {
-      validationErrors.password =
-        "Password is required";
+    if (!editingId && !form.password.trim()) {
+      validationErrors.password = "Password is required";
     }
 
-    if (
-      form.password.trim() &&
-      form.password.trim().length <
-        6
-    ) {
-      validationErrors.password =
-        "Password must be at least 6 characters";
+    if (form.password.trim() && form.password.trim().length < 6) {
+      validationErrors.password = "Password must be at least 6 characters";
     }
 
     if (!form.role) {
-      validationErrors.role =
-        "Role is required";
+      validationErrors.role = "Role is required";
     }
 
-    if (
-      Object.keys(
-        validationErrors
-      ).length
-    ) {
-      setErrors(
-        validationErrors
-      );
+    if (Object.keys(validationErrors).length) {
+      setErrors(validationErrors);
+
+      toast.error("Please fix the highlighted fields.");
 
       return;
     }
@@ -338,46 +236,27 @@ function Users() {
       if (editingId) {
         const payload = {
           name: form.name.trim(),
-          email:
-            form.email.trim(),
+          email: form.email.trim(),
           role: form.role,
         };
 
-        /*
-         * Password only when changed.
-         *
-         * IMPORTANT:
-         * isActive is NOT sent here.
-         */
-
-        if (
-          form.password.trim()
-        ) {
-          payload.password =
-            form.password.trim();
+        // Password only when changed
+        if (form.password.trim()) {
+          payload.password = form.password.trim();
         }
 
-        const response =
-          await api.put(
-            `/settings/users/${editingId}`,
-            payload
-          );
+        const response = await api.put(`/settings/users/${editingId}`, payload);
 
-        alert(
-          response.data?.message ||
-            "User updated successfully."
-        );
+        toast.success(response.data?.message || "User updated successfully.");
       }
 
       // ======================================
       // CREATE
       // ======================================
-
       else {
         const payload = {
           name: form.name.trim(),
-          email:
-            form.email.trim(),
+          email: form.email.trim(),
           password: form.password,
           role: form.role,
 
@@ -385,37 +264,26 @@ function Users() {
           isActive: true,
         };
 
-        const response =
-          await api.post(
-            "/settings/users",
-            payload
-          );
+        const response = await api.post("/settings/users", payload);
 
-        alert(
-          response.data?.message ||
-            "User saved successfully."
-        );
+        toast.success(response.data?.message || "User saved successfully.");
       }
 
       // ======================================
       // RESET
       // ======================================
 
-      setForm(
-        createBlankForm()
-      );
-
+      setForm(createBlankForm());
       setEditingId(null);
-
       setErrors({});
-
       setSearch("");
-
       setCurrentPage(1);
 
       // ======================================
       // RELOAD
       // ======================================
+
+      dispatch(userActions.clearResource());
 
       await load();
 
@@ -424,18 +292,13 @@ function Users() {
       }
     } catch (err) {
       console.error(
-        editingId
-          ? "Failed to update user:"
-          : "Failed to save user:",
-        err
+        editingId ? "Failed to update user:" : "Failed to save user:",
+        err,
       );
 
-      alert(
-        err?.response?.data
-          ?.message ||
-          (editingId
-            ? "Failed to update user"
-            : "Failed to save user")
+      toast.error(
+        err?.response?.data?.message ||
+          (editingId ? "Failed to update user." : "Failed to save user."),
       );
     } finally {
       setSaving(false);
@@ -446,13 +309,9 @@ function Users() {
   // EDIT
   // ==========================================
 
-  const handleEdit = (
-    item
-  ) => {
+  const handleEdit = (item) => {
     if (!canEdit) {
-      alert(
-        "You do not have permission to edit users."
-      );
+      toast.error("You do not have permission to edit users.");
 
       return;
     }
@@ -460,10 +319,7 @@ function Users() {
     setEditingId(item._id);
 
     const roleId =
-      typeof item.role ===
-      "string"
-        ? item.role
-        : item.role?._id || "";
+      typeof item.role === "string" ? item.role : item.role?._id || "";
 
     setForm({
       name: item.name || "",
@@ -484,72 +340,45 @@ function Users() {
   // CANCEL EDIT
   // ==========================================
 
-  const handleCancelEdit =
-    () => {
-      setEditingId(null);
+  const handleCancelEdit = () => {
+    setEditingId(null);
 
-      setForm(
-        createBlankForm()
-      );
+    setForm(createBlankForm());
 
-      setErrors({});
-    };
+    setErrors({});
+  };
 
   // ==========================================
   // DELETE
   // ==========================================
 
-  const handleDelete = async (
-    id
-  ) => {
+  const handleDelete = async (id) => {
     if (!canDelete) {
-      alert(
-        "You do not have permission to delete users."
-      );
+      toast.error("You do not have permission to delete users.");
 
       return;
     }
 
     try {
-      await api.delete(
-        `/settings/users/${id}`
-      );
+      await api.delete(`/settings/users/${id}`);
 
-      alert(
-        "User deleted successfully."
-      );
+      toast.success("User deleted successfully.");
+
+      dispatch(userActions.clearResource());
 
       await load();
 
-      const remainingItems =
-        items.length - 1;
+      const remainingItems = items.length - 1;
 
-      const newTotalPages =
-        Math.ceil(
-          remainingItems /
-            itemsPerPage
-        );
+      const newTotalPages = Math.ceil(remainingItems / itemsPerPage);
 
-      if (
-        newTotalPages > 0 &&
-        currentPage >
-          newTotalPages
-      ) {
-        setCurrentPage(
-          newTotalPages
-        );
+      if (newTotalPages > 0 && currentPage > newTotalPages) {
+        setCurrentPage(newTotalPages);
       }
     } catch (err) {
-      console.error(
-        "Failed to delete user:",
-        err
-      );
+      console.error("Failed to delete user:", err);
 
-      alert(
-        err?.response?.data
-          ?.message ||
-          "Failed to delete user"
-      );
+      toast.error(err?.response?.data?.message || "Failed to delete user.");
     }
   };
 
@@ -557,135 +386,107 @@ function Users() {
   // STATUS TOGGLE
   // ==========================================
 
-  const handleStatusChange =
-    async (item) => {
-      if (!canEdit) {
-        alert(
-          "You do not have permission to change user status."
-        );
+  const handleStatusChange = async (item) => {
+    if (!canEdit) {
+      toast.error("You do not have permission to change user status.");
 
-        return;
-      }
+      return;
+    }
 
-      // ======================================
-      // DEFAULT USER PROTECTION
-      // ======================================
+    // ======================================
+    // DEFAULT USER PROTECTION
+    // ======================================
 
-      if (
-        item.isDefault === true
-      ) {
-        alert(
-          "Default user status cannot be changed."
-        );
+    if (item.isDefault === true) {
+      toast.error("Default user status cannot be changed.");
 
-        return;
-      }
+      return;
+    }
 
-      // ======================================
-      // CURRENT STATUS
-      // ======================================
+    // ======================================
+    // CURRENT STATUS
+    // ======================================
 
-      const currentStatus =
-        item.isActive !== false;
+    const currentStatus = item.isActive !== false;
 
-      const newStatus =
-        !currentStatus;
+    const newStatus = !currentStatus;
 
-      // ======================================
-      // OPTIMISTIC UPDATE
-      // ======================================
+    // ======================================
+    // OPTIMISTIC UPDATE
+    // ======================================
 
-      setItems((previous) =>
-        previous.map((user) =>
+    dispatch(
+      userActions.setData(
+        items.map((user) =>
           user._id === item._id
             ? {
                 ...user,
-                isActive:
-                  newStatus,
+                isActive: newStatus,
               }
-            : user
-        )
-      );
+            : user,
+        ),
+      ),
+    );
 
-      try {
-        // ====================================
-        // SEPARATE STATUS API
-        // ====================================
+    try {
+      // ====================================
+      // STATUS API
+      // ====================================
 
-        const response =
-          await api.patch(
-            `/settings/users/${item._id}/status`,
-            {
-              isActive:
-                newStatus,
-            }
-          );
+      const response = await api.patch(`/settings/users/${item._id}/status`, {
+        isActive: newStatus,
+      });
 
-        // ====================================
-        // SERVER RESPONSE
-        // ====================================
+      // ====================================
+      // SERVER RESPONSE
+      // ====================================
 
-        if (
-          response.data?.user
-        ) {
-          setItems(
-            (previous) =>
-              previous.map(
-                (user) =>
-                  user._id ===
-                  response.data
-                    .user._id
-                    ? response.data
-                        .user
-                    : user
-              )
-          );
-        }
-
-        console.log(
-          newStatus
-            ? "User activated"
-            : "User deactivated"
-        );
-      } catch (err) {
-        console.error(
-          "Failed to update user status:",
-          err
-        );
-
-        // ====================================
-        // ROLLBACK
-        // ====================================
-
-        setItems((previous) =>
-          previous.map((user) =>
-            user._id ===
-            item._id
-              ? {
-                  ...user,
-                  isActive:
-                    item.isActive,
-                }
-              : user
-          )
-        );
-
-        alert(
-          err?.response?.data
-            ?.message ||
-            "Failed to update user status"
+      if (response.data?.user) {
+        dispatch(
+          userActions.setData(
+            items.map((user) =>
+              user._id === response.data.user._id ? response.data.user : user,
+            ),
+          ),
         );
       }
-    };
+
+      toast.success(
+        newStatus
+          ? "User activated successfully."
+          : "User deactivated successfully.",
+      );
+    } catch (err) {
+      console.error("Failed to update user status:", err);
+
+      // ====================================
+      // ROLLBACK
+      // ====================================
+
+      dispatch(
+        userActions.setData(
+          items.map((user) =>
+            user._id === item._id
+              ? {
+                  ...user,
+                  isActive: item.isActive,
+                }
+              : user,
+          ),
+        ),
+      );
+
+      toast.error(
+        err?.response?.data?.message || "Failed to update user status.",
+      );
+    }
+  };
 
   // ==========================================
   // FORM CHANGE
   // ==========================================
 
-  const handleChange = (
-    name,
-    value
-  ) => {
+  const handleChange = (name, value) => {
     setForm((previous) => ({
       ...previous,
       [name]: value,
@@ -701,37 +502,32 @@ function Users() {
   // SEARCH CHANGE
   // ==========================================
 
-  const handleSearchChange =
-    (value) => {
-      setSearch(value);
-
-      setCurrentPage(1);
-    };
+  const handleSearchChange = (value) => {
+    setSearch(value);
+    setCurrentPage(1);
+  };
 
   // ==========================================
   // PAGE CHANGE
   // ==========================================
 
-  const handlePageChange =
-    (page) => {
-      setCurrentPage(page);
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
 
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
-    };
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
 
   // ==========================================
   // ITEMS PER PAGE
   // ==========================================
 
-  const handleItemsPerPageChange =
-    (value) => {
-      setItemsPerPage(value);
-
-      setCurrentPage(1);
-    };
+  const handleItemsPerPageChange = (value) => {
+    setItemsPerPage(value);
+    setCurrentPage(1);
+  };
 
   // ==========================================
   // NO VIEW PERMISSION
@@ -742,8 +538,7 @@ function Users() {
       <div className="content">
         <section className="panel">
           <div className="empty-state">
-            You do not have permission
-            to view users.
+            You do not have permission to view users.
           </div>
         </section>
       </div>
@@ -762,21 +557,14 @@ function Users() {
         <UserForm
           form={form}
           errors={errors}
-          saving={
-            saving ||
-            rolesLoading
-          }
+          saving={saving || rolesLoading}
           editingId={editingId}
           roles={roles}
           canCreate={canCreate}
           canEdit={canEdit}
-          onChange={
-            handleChange
-          }
+          onChange={handleChange}
           onSubmit={submit}
-          onCancel={
-            handleCancelEdit
-          }
+          onCancel={handleCancelEdit}
         />
       )}
 
@@ -784,37 +572,21 @@ function Users() {
 
       <UserTable
         items={items}
-        filteredItems={
-          filteredItems
-        }
-        paginatedItems={
-          paginatedItems
-        }
+        filteredItems={filteredItems}
+        paginatedItems={paginatedItems}
         search={search}
         canEdit={canEdit}
         canDelete={canDelete}
-        currentPage={
-          currentPage
-        }
+        currentPage={currentPage}
         totalPages={totalPages}
         totalItems={totalItems}
-        itemsPerPage={
-          itemsPerPage
-        }
-        onSearchChange={
-          handleSearchChange
-        }
+        itemsPerPage={itemsPerPage}
+        onSearchChange={handleSearchChange}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onStatusChange={
-          handleStatusChange
-        }
-        onPageChange={
-          handlePageChange
-        }
-        onItemsPerPageChange={
-          handleItemsPerPageChange
-        }
+        onStatusChange={handleStatusChange}
+        onPageChange={handlePageChange}
+        onItemsPerPageChange={handleItemsPerPageChange}
       />
     </div>
   );

@@ -13,7 +13,7 @@ const router = express.Router();
 router.use(auth);
 
 // ==========================================
-// GET DASHBOARD
+// DASHBOARD
 // GET /api/dashboard?year=2026
 // ==========================================
 

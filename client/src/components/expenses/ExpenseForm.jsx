@@ -1,5 +1,6 @@
 import React from "react";
 import { Plus, Save, X } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 import expenseCategory from "../../data/expense.json";
 import SearchableSelect from "../common/SearchableSelect";
@@ -24,6 +25,26 @@ function ExpenseForm({
 
   const canSubmit = isEditing ? canEdit : canCreate;
 
+  // ==========================================
+  // FORM SUBMIT
+  // ==========================================
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (!canSubmit) {
+      toast.error(
+        isEditing
+          ? "You do not have permission to edit expenses."
+          : "You do not have permission to create expenses.",
+      );
+
+      return;
+    }
+
+    onSubmit();
+  };
+
   return (
     <section className="panel">
       {/* ======================================
@@ -36,24 +57,7 @@ function ExpenseForm({
           : `New Expense - ${expenseNumber}`}
       </h3>
 
-      <form
-        className="form-grid"
-        onSubmit={(e) => {
-          e.preventDefault();
-
-          if (!canSubmit) {
-            alert(
-              isEditing
-                ? "You do not have permission to edit expenses."
-                : "You do not have permission to create expenses.",
-            );
-
-            return;
-          }
-
-          onSubmit();
-        }}
-      >
+      <form className="form-grid" onSubmit={handleSubmit}>
         {/* ====================================
             DATE
         ==================================== */}
@@ -126,7 +130,9 @@ function ExpenseForm({
         ==================================== */}
 
         <div className="form-submit">
-          {/* UPDATE */}
+          {/* ==================================
+              EDIT
+          ================================== */}
 
           {isEditing ? (
             <>
@@ -149,7 +155,9 @@ function ExpenseForm({
               </button>
             </>
           ) : (
-            /* CREATE */
+            /* ==================================
+                CREATE
+            ================================== */
 
             canCreate && (
               <button className="primary" type="submit" disabled={saving}>

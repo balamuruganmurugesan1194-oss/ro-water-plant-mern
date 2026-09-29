@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-hot-toast";
 
 import api from "../api/client";
 
@@ -6,6 +8,7 @@ import { useAuth } from "../context/AuthContext";
 
 import PartyForm from "../components/parties/PartyForm";
 import PartyTable from "../components/parties/PartyTable";
+import { fetchParties, partyActions } from "../app/resourceSlice";
 
 // ==========================================
 // INITIAL FORM
@@ -23,6 +26,12 @@ const initialForm = {
 // ==========================================
 
 function Parties() {
+  const dispatch = useDispatch();
+
+  const { data: items, error: loadError } = useSelector(
+    (state) => state.parties,
+  );
+
   // ==========================================
   // AUTH / PERMISSIONS
   // ==========================================
@@ -42,11 +51,8 @@ function Parties() {
   };
 
   const canView = hasPermission("parties.view");
-
   const canAdd = hasPermission("parties.create");
-
   const canEdit = hasPermission("parties.edit");
-
   const canDelete = hasPermission("parties.delete");
 
   // ==========================================
@@ -54,8 +60,6 @@ function Parties() {
   // ==========================================
 
   const [type, setType] = useState("customer");
-
-  const [items, setItems] = useState([]);
 
   const [saving, setSaving] = useState(false);
 
@@ -87,21 +91,29 @@ function Parties() {
 
   const load = async () => {
     if (!canView) {
-      setItems([]);
-
       return;
     }
 
     try {
-      const response = await api.get(`/parties?type=${type}`);
-
-      setItems(response.data || []);
+      await dispatch(fetchParties({ type }));
     } catch (err) {
       console.error("Failed to load parties:", err);
 
-      setItems([]);
+      toast.error(err?.response?.data?.message || "Failed to load parties");
     }
   };
+
+  // ==========================================
+  // LOAD ERROR FROM REDUX
+  // ==========================================
+
+  useEffect(() => {
+    if (loadError) {
+      toast.error(
+        typeof loadError === "string" ? loadError : "Failed to load parties",
+      );
+    }
+  }, [loadError]);
 
   // ==========================================
   // LOAD WHEN TYPE CHANGES
@@ -124,6 +136,23 @@ function Parties() {
       load();
     }
   }, [type, canView]);
+
+  useEffect(() => {
+    if (!canView || !search) {
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      dispatch(
+        fetchParties({
+          type,
+          search,
+        }),
+      );
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [search, type, canView, dispatch]);
 
   // ==========================================
   // SEARCH
@@ -178,7 +207,7 @@ function Parties() {
 
   const handleEdit = (party) => {
     if (!canEdit) {
-      alert("You do not have permission to edit parties.");
+      toast.error("You do not have permission to edit parties.");
 
       return;
     }
@@ -228,13 +257,15 @@ function Parties() {
           address: form.address.trim(),
         });
 
-        alert("Party updated successfully");
+        toast.success("Party updated successfully");
 
         resetForm();
 
         setSearch("");
 
         setCurrentPage(1);
+
+        dispatch(partyActions.clearResource());
 
         await load();
 
@@ -261,6 +292,8 @@ function Parties() {
         type,
       });
 
+      toast.success("Party created successfully");
+
       // ========================================
       // RESET FORM
       // ========================================
@@ -275,11 +308,13 @@ function Parties() {
       // RELOAD
       // ========================================
 
+      dispatch(partyActions.clearResource());
+
       await load();
     } catch (err) {
       console.error("Failed to save party:", err);
 
-      alert(
+      toast.error(
         err?.response?.data?.message || err.message || "Failed to save party",
       );
     } finally {
@@ -293,7 +328,7 @@ function Parties() {
 
   const handleDelete = async (id) => {
     if (!canDelete) {
-      alert("You do not have permission to delete parties.");
+      toast.error("You do not have permission to delete parties.");
 
       return;
     }
@@ -301,7 +336,11 @@ function Parties() {
     try {
       await api.delete(`/parties/${id}`);
 
+      dispatch(partyActions.clearResource());
+
       await load();
+
+      toast.success("Party deleted successfully");
 
       const remainingItems = items.length - 1;
 
@@ -313,7 +352,7 @@ function Parties() {
     } catch (err) {
       console.error("Failed to delete party:", err);
 
-      alert(err?.response?.data?.message || "Failed to delete party");
+      toast.error(err?.response?.data?.message || "Failed to delete party");
     }
   };
 
@@ -415,7 +454,6 @@ function Parties() {
         search={search}
         onSearchChange={(value) => {
           setSearch(value);
-
           setCurrentPage(1);
         }}
         onEdit={handleEdit}

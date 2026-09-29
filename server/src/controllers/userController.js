@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 
 import User from "../models/User.js";
 import Role from "../models/Role.js";
+import { getPagination, paginatedResponse } from "../utils/pagination.js";
 
 // ==========================================
 // GET USERS
@@ -12,8 +13,17 @@ export const getUsers = async (
   res
 ) => {
   try {
-    const users =
-      await User.find()
+    const filter = {};
+
+    if (req.query.search?.trim()) {
+      const search = req.query.search.trim();
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const query = User.find(filter)
         .select("-password")
         .populate(
           "role",
@@ -22,6 +32,18 @@ export const getUsers = async (
         .sort({
           createdAt: 1,
         });
+
+    if (req.query.page || req.query.limit) {
+      const { page, limit, skip } = getPagination(req.query);
+      const [users, total] = await Promise.all([
+        query.skip(skip).limit(limit).lean(),
+        User.countDocuments(filter),
+      ]);
+
+      return res.status(200).json(paginatedResponse(users, total, page, limit));
+    }
+
+    const users = await query.lean();
 
     return res.status(200).json(users);
   } catch (error) {

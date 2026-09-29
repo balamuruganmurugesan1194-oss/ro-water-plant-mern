@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 
 import { useDispatch, useSelector } from "react-redux";
 
+import { toast } from "react-hot-toast";
+
 import RoleForm from "../../components/roles/RoleForm";
 import RoleTable from "../../components/roles/RoleTable";
 
@@ -39,10 +41,18 @@ function RolesPermissions() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   /*
-  |--------------------------------------------------------------------------
-  | Load
-  |--------------------------------------------------------------------------
-  */
+   * =========================================================
+   * PERMISSION PANEL OPEN / CLOSE
+   * =========================================================
+   */
+
+  const [showPermissions, setShowPermissions] = useState(false);
+
+  /*
+   * =========================================================
+   * LOAD
+   * =========================================================
+   */
 
   useEffect(() => {
     dispatch(fetchRoles());
@@ -50,10 +60,10 @@ function RolesPermissions() {
   }, [dispatch]);
 
   /*
-  |--------------------------------------------------------------------------
-  | Search
-  |--------------------------------------------------------------------------
-  */
+   * =========================================================
+   * SEARCH
+   * =========================================================
+   */
 
   const filteredRoles = roles.filter((role) => {
     const value = search.toLowerCase().trim();
@@ -69,10 +79,10 @@ function RolesPermissions() {
   });
 
   /*
-  |--------------------------------------------------------------------------
-  | Pagination
-  |--------------------------------------------------------------------------
-  */
+   * =========================================================
+   * PAGINATION
+   * =========================================================
+   */
 
   const totalItems = filteredRoles.length;
 
@@ -86,10 +96,10 @@ function RolesPermissions() {
   );
 
   /*
-  |--------------------------------------------------------------------------
-  | Change
-  |--------------------------------------------------------------------------
-  */
+   * =========================================================
+   * CHANGE
+   * =========================================================
+   */
 
   const handleChange = (name, value) => {
     setForm((previous) => ({
@@ -101,32 +111,76 @@ function RolesPermissions() {
       ...previous,
       [name]: "",
     }));
+
+    /*
+     * Remove permission validation error
+     * immediately after selecting permission.
+     */
+
+    if (name === "permissions" && value && value.length > 0) {
+      setErrors((previous) => ({
+        ...previous,
+        permissions: "",
+      }));
+    }
   };
 
   /*
-  |--------------------------------------------------------------------------
-  | Submit
-  |--------------------------------------------------------------------------
-  */
+   * =========================================================
+   * SUBMIT
+   * =========================================================
+   */
 
   const handleSubmit = async () => {
     const nextErrors = {};
+
+    /*
+     * ROLE NAME VALIDATION
+     */
 
     if (!form.name.trim()) {
       nextErrors.name = "Role name is required";
     }
 
+    /*
+     * PERMISSION VALIDATION
+     */
+
     if (!form.permissions || form.permissions.length === 0) {
       nextErrors.permissions = "Select at least one permission";
+
+      /*
+       * Automatically open permission
+       * matrix when validation fails.
+       */
+
+      setShowPermissions(true);
     }
+
+    /*
+     * STOP SUBMIT
+     */
 
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
+
+      toast.error("Please fix the highlighted fields.");
+
       return;
     }
 
+    /*
+     * =======================================================
+     * SAVE
+     * =======================================================
+     */
+
     try {
       setSaving(true);
+
+      /*
+       * UPDATE
+       */
 
       if (editingId) {
         await dispatch(
@@ -136,28 +190,48 @@ function RolesPermissions() {
           }),
         ).unwrap();
 
-        alert("Role updated successfully.");
+        toast.success("Role updated successfully.");
       } else {
+        /*
+         * CREATE
+         */
+
         await dispatch(createRole(form)).unwrap();
 
-        alert("Role created successfully.");
+        toast.success("Role created successfully.");
       }
+
+      /*
+       * RESET
+       */
 
       resetForm();
 
-      dispatch(fetchRoles());
+      /*
+       * REFRESH ROLES
+       */
+
+      await dispatch(fetchRoles()).unwrap();
     } catch (error) {
-      alert(error || "Failed to save role");
+      console.error(
+        editingId ? "Failed to update role:" : "Failed to save role:",
+        error,
+      );
+
+      toast.error(
+        error ||
+          (editingId ? "Failed to update role." : "Failed to create role."),
+      );
     } finally {
       setSaving(false);
     }
   };
 
   /*
-  |--------------------------------------------------------------------------
-  | Edit
-  |--------------------------------------------------------------------------
-  */
+   * =========================================================
+   * EDIT
+   * =========================================================
+   */
 
   const handleEdit = (role) => {
     setEditingId(role._id);
@@ -170,6 +244,13 @@ function RolesPermissions() {
 
     setErrors({});
 
+    /*
+     * Keep permission section closed
+     * when opening edit form.
+     */
+
+    setShowPermissions(false);
+
     window.scrollTo({
       top: 0,
       behavior: "smooth",
@@ -177,10 +258,10 @@ function RolesPermissions() {
   };
 
   /*
-  |--------------------------------------------------------------------------
-  | Cancel
-  |--------------------------------------------------------------------------
-  */
+   * =========================================================
+   * RESET
+   * =========================================================
+   */
 
   const resetForm = () => {
     setEditingId(null);
@@ -188,48 +269,63 @@ function RolesPermissions() {
     setForm(createBlankForm());
 
     setErrors({});
+
+    /*
+     * Close permission matrix
+     */
+
+    setShowPermissions(false);
   };
+
+  /*
+   * =========================================================
+   * CANCEL
+   * =========================================================
+   */
 
   const handleCancel = () => {
     resetForm();
   };
 
   /*
-  |--------------------------------------------------------------------------
-  | Delete
-  |--------------------------------------------------------------------------
-  */
+   * =========================================================
+   * DELETE
+   * =========================================================
+   */
 
   const handleDelete = async (id) => {
     try {
       await dispatch(deleteRole(id)).unwrap();
 
-      alert("Role deleted successfully.");
+      toast.success("Role deleted successfully.");
 
       if (paginatedRoles.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       }
     } catch (error) {
-      alert(error || "Failed to delete role");
+      console.error("Failed to delete role:", error);
+
+      toast.error(error || "Failed to delete role.");
     }
   };
 
   /*
-  |--------------------------------------------------------------------------
-  | Search
-  |--------------------------------------------------------------------------
-  */
+   * =========================================================
+   * SEARCH
+   * =========================================================
+   */
 
   const handleSearch = (value) => {
     setSearch(value);
+
     setCurrentPage(1);
   };
 
   /*
-  |--------------------------------------------------------------------------
-  | Page
-  |--------------------------------------------------------------------------
-  */
+   * =========================================================
+   * PAGE
+   * =========================================================
+   */
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -241,21 +337,22 @@ function RolesPermissions() {
   };
 
   /*
-  |--------------------------------------------------------------------------
-  | Items per page
-  |--------------------------------------------------------------------------
-  */
+   * =========================================================
+   * ITEMS PER PAGE
+   * =========================================================
+   */
 
   const handleItemsPerPageChange = (value) => {
     setItemsPerPage(value);
+
     setCurrentPage(1);
   };
 
   /*
-  |--------------------------------------------------------------------------
-  | UI
-  |--------------------------------------------------------------------------
-  */
+   * =========================================================
+   * UI
+   * =========================================================
+   */
 
   return (
     <div className="content">
@@ -265,6 +362,8 @@ function RolesPermissions() {
         saving={saving || loading}
         editingId={editingId}
         permissions={permissions}
+        showPermissions={showPermissions}
+        setShowPermissions={setShowPermissions}
         onChange={handleChange}
         onSubmit={handleSubmit}
         onCancel={handleCancel}

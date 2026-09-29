@@ -144,3 +144,104 @@
 
   line-height: 1.4;
 }
+
+/* =========================================================
+   DELIVERIES
+   Reuse existing Sales item styles
+========================================================= */
+
+.delivery-item-row {
+  grid-template-columns:
+    minmax(0, 1fr)
+    180px
+    40px;
+}
+
+/* Product takes all remaining width */
+
+.delivery-item-row .sale-item-product {
+  min-width: 0;
+}
+
+/* Quantity */
+
+.delivery-item-row .delivery-quantity {
+  min-width: 0;
+}
+
+.delivery-item-row .delivery-quantity input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Delete button */
+
+.delivery-item-row > .icon {
+  align-self: end;
+}
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 768px) {
+  .delivery-item-row {
+    grid-template-columns:
+      minmax(0, 1fr)
+      130px
+      40px;
+  }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 500px) {
+  .delivery-item-row {
+    grid-template-columns: 1fr;
+  }
+
+  .delivery-item-row > .icon {
+    justify-self: end;
+  }
+}
+
+.purchase-item-row {
+  grid-template-columns:
+    minmax(250px, 1fr)
+    140px
+    140px
+    40px;
+}
+
+/* ========================================================= PRODUCTION INPUT ITEMS Reuse existing .sale-item-row styles ========================================================= */
+.production-item-row {
+  grid-template-columns: minmax(0, 1fr) 180px 40px;
+}
+.production-item-row .sale-item-product {
+  min-width: 0;
+}
+.production-item-row .production-quantity {
+  min-width: 0;
+}
+.production-item-row .production-quantity input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.production-item-row > .icon {
+  align-self: end;
+} /* ========================================================= TABLET ========================================================= */
+@media (max-width: 768px) {
+  .production-item-row {
+    grid-template-columns: minmax(0, 1fr) 130px 40px;
+  }
+} /* ========================================================= MOBILE ========================================================= */
+@media (max-width: 500px) {
+  .production-item-row {
+    grid-template-columns: 1fr;
+  }
+  .production-item-row > .icon {
+    justify-self: end;
+  }
+}
